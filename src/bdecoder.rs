@@ -16,40 +16,64 @@ pub enum BValue {
 
 impl BValue{
     
-    pub fn serialize(characters: &str, pos: &mut usize ) -> Result<Self,io::Error> {
-        match characters.chars().nth(*pos) {
-            Some('i') => {
+    pub fn serialize(bytes: &[u8], pos: &mut usize ) -> Result<Self,io::Error> {
+        match bytes[*pos] {
+            b'i' => {
                 *pos = *pos + 1; // i
-                let str_numbers = characters.split_at(*pos).1.split_once('e');
-                let mut numbers= "";
-                match str_numbers {
-                    Some(value) => {numbers = value.0;},
-                    None => return Err(io::Error::new(io::ErrorKind::Unsupported, "Number parsing failed")),
-                };
-                let num: i64 = match i64::from_str(numbers) {
-                    Ok(num) => num,
+                let mut str_intpool: Vec<u8> = Vec::new();
+                let num: i64;
+                while bytes[*pos] != b'e' {
+                    str_intpool.push(bytes[*pos]);
+                    *pos = *pos + 1; // ints iterating
+                }
+                *pos = *pos + 1; // ints iterating
+                
+                let number: i64 = match str::from_utf8(&str_intpool) { 
+                    Ok(val) => match val.parse::<i64>() {
+                        Ok(val2) => val2,
+                        Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Number parsing failed")), 
+                        
+                    },
                     Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Number parsing failed")),
                 };
-                *pos = *pos + 1 + numbers.len(); // num + e
-                return Ok(BValue::Number(num));
+
+                return Ok(BValue::Number(number));
 
             },
-            Some('0'..'9') => {
-                let size_str = characters.split_at(*pos).1.split_once(':').unwrap().0;
-                let size = match u64::from_str(size_str) {
-                    Ok(num) => num,
-                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Number parsing failed for Text length")),
+            b'0'..b'9' => {
+                println!("Got into this");
+                let mut str_intpool: Vec<u8> = Vec::new();
+                while bytes[*pos] != b':' {
+                    str_intpool.push(bytes[*pos]);
+                    *pos = *pos + 1; // ints iterating
+                }
+                *pos = *pos + 1; // for :
+                
+                let number: i64 = match str::from_utf8(&str_intpool) { 
+                    Ok(val) => match val.parse::<i64>() {
+                        Ok(val2) => val2,
+                        Err(valfuck) => {
+                            println!("Fucker is {}",valfuck);
+                            return Err(io::Error::new(io::ErrorKind::Unsupported, " 1 Number parsing failed"));
+                        },
+                    },
+                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "2 Number parsing failed")),
                 };
-                *pos = *pos + size_str.len() + 1;
-                let words = characters.split_at(*pos).1.split_at(size as usize).0;
-                *pos = *pos + words.len();
-                return Ok(BValue::Text(words.to_string()));
+            
+                let chars = &bytes[*pos..*pos+number as usize];
+                let chars = match str::from_utf8(chars){
+                    Ok(val) => val.to_string(),
+                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "3 List parsing failed")),
+                };
+
+                *pos = *pos + number as usize;
+                return Ok(BValue::Text(chars));
             },
-            Some('l') => {
+            b'l' => {
                 let mut lists = Vec::new();
                 *pos = *pos + 1; // for l
-                while characters.chars().nth(*pos) != Some('e') {
-                    let entry = Self::serialize(characters, pos);
+                while bytes[*pos] != b'e' {
+                    let entry = Self::serialize(bytes, pos);
                     match entry {
                         Ok(val) => {
                             lists.push(val);
@@ -63,11 +87,11 @@ impl BValue{
                 *pos = *pos + 1; // for e
                 return Ok(BValue::Lists(lists))
             }
-            Some('d') => {
+            b'd' => {
                 let mut dicts: Vec<(Vec<u8>,BValue)>  = Vec::new(); 
                 *pos = *pos + 1; // for l
-                while characters.chars().nth(*pos) != Some('e') {
-                    let key_entry = Self::serialize(characters, pos);
+                while bytes[*pos] != b'e' {
+                    let key_entry = Self::serialize(bytes, pos);
                     let dict_key;
                     match key_entry {
                         Ok(val) => {
@@ -75,13 +99,12 @@ impl BValue{
                                 BValue::Text(txt) => dict_key = txt,
                                 _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Key is a non integer value")),
                             };
-                            
                         },
                         Err(_) => {
                             return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
                         }
                     }
-                    let val_entry = Self::serialize(characters, pos);
+                    let val_entry = Self::serialize(bytes, pos);
                     let dict_value;
                     match val_entry {
                         Ok(val) => {
@@ -98,7 +121,6 @@ impl BValue{
                 return Ok(BValue::Dicts(dicts))
             }
             _ => {
-                println!("Got some shit");
                 return Err( io::Error::new(io::ErrorKind::Unsupported, "No kind of message found"));
             },
         };

@@ -11,7 +11,7 @@ fn main() {
     // bvalue.printer();
 
 
-    let test_value = "d4:infod4:name4:Test6:lengthi1000ee4:tagsl3:one3:twoee";
+    let test_value: &[u8] = b"d4:name5:Aruns3:agei24e5:peersl6:peer01i6881e6:peer02i6882ee4:infod4:name4:test6:lengthi1024e6:piecesl20:abcdefghijklmnopqrst20:uvwxyzabcdefghijklmneeee";
     let mut pos: usize = 0;
     let bvalue: BValue = BValue::serialize(test_value, &mut pos).expect("msg");
     println!("\n\n");
