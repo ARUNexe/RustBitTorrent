@@ -1,13 +1,9 @@
-use core::num;
-use std::collections::HashMap;
-use std::io::{self, ErrorKind};
-use std::ops::Add;
-use std::str::FromStr;
+use std::io::{self};
 
 
 
 pub enum BValue {
-    Text(String),
+    Text(Vec<u8>),
     Number(i64),
     Lists(Vec<BValue>),
     Dicts(Vec<(Vec<u8>,BValue)>),
@@ -21,7 +17,6 @@ impl BValue{
             b'i' => {
                 *pos = *pos + 1; // i
                 let mut str_intpool: Vec<u8> = Vec::new();
-                let num: i64;
                 while bytes[*pos] != b'e' {
                     str_intpool.push(bytes[*pos]);
                     *pos = *pos + 1; // ints iterating
@@ -41,7 +36,6 @@ impl BValue{
 
             },
             b'0'..b'9' => {
-                println!("Got into this");
                 let mut str_intpool: Vec<u8> = Vec::new();
                 while bytes[*pos] != b':' {
                     str_intpool.push(bytes[*pos]);
@@ -61,11 +55,7 @@ impl BValue{
                 };
             
                 let chars = &bytes[*pos..*pos+number as usize];
-                let chars = match str::from_utf8(chars){
-                    Ok(val) => val.to_string(),
-                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "3 List parsing failed")),
-                };
-
+                let chars = chars.to_vec();
                 *pos = *pos + number as usize;
                 return Ok(BValue::Text(chars));
             },
@@ -77,7 +67,6 @@ impl BValue{
                     match entry {
                         Ok(val) => {
                             lists.push(val);
-
                         }
                         Err(_) => {
                             return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
@@ -96,7 +85,9 @@ impl BValue{
                     match key_entry {
                         Ok(val) => {
                             match val {
-                                BValue::Text(txt) => dict_key = txt,
+                                BValue::Text(txt) => {
+                                    dict_key = txt
+                                },
                                 _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Key is a non integer value")),
                             };
                         },
@@ -114,7 +105,7 @@ impl BValue{
                             return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
                         }
                     }
-                    let key_bytes = dict_key.as_bytes().to_vec();
+                    let key_bytes = dict_key;
                     dicts.push((key_bytes,dict_value));
                 }
                 *pos = *pos + 1; // for e
@@ -130,7 +121,8 @@ impl BValue{
     pub fn printer(self) {
         match self {
             BValue::Text(val) => {
-                print!("'{}'",val);
+                let string_text = str::from_utf8(&val).expect("Error while printing v8 as string");
+                print!("'{}'",string_text);
             },
             BValue::Number(val) => {
                 print!(" {} ",val);
@@ -156,9 +148,6 @@ impl BValue{
                 }
                 print!(" }} ");
             },
-            _ => {
-                println!("Unknown value printer fucked");
-            }
         }
     }
 }
