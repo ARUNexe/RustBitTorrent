@@ -1,0 +1,109 @@
+use std::io;
+use crate::bdecoder::BValue;
+
+#[derive(Default)]
+pub struct InfoHash{
+    pub length: i64,
+    pub name: String,
+    pub piece_length: i64,
+    pub pieces: Vec<u8>,
+}
+
+#[derive(Default)]
+pub struct TorrentMeta{
+    pub anounce_url: String,
+    pub comment: String,
+    pub created_by: String,
+    pub creation_date: i64,
+    pub info: InfoHash,
+}
+
+impl TorrentMeta {
+
+        pub fn printer(self){
+
+
+            println!("INFO - Pieces : {:02x?}",self.info.pieces);
+            println!("INFO - Length : {}",self.info.length);
+            println!("INFO - Name : {}",self.info.name);
+            println!("INFO - Piece Length : {}",self.info.piece_length);
+
+            println!("Anounce URL : {}",self.anounce_url);
+            println!("Comment : {}",self.comment);
+            println!("Created By : {}",self.created_by);
+            println!("Creation Date : {}",self.creation_date);
+
+            
+        }
+
+        pub fn serialize(bvalue: BValue) -> Result<Self, io::Error>{
+        
+            let mut torrent_meta = TorrentMeta::default();
+            match bvalue {
+                BValue::Dicts(dict) => {
+                    for entries in dict{
+                        let key = entries.0;
+                        let value = entries.1;
+                        let key_string = match str::from_utf8(&key) {
+                            Ok(strs) => strs,
+                            Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url string")),
+                        };
+                        match key_string {
+                            "announce" => {
+                                torrent_meta.anounce_url = value.get_text()?;
+                            },
+                            "comment" => {
+                                torrent_meta.comment = value.get_text()?;
+                            },
+                            "created by" => {
+                                torrent_meta.created_by = value.get_text()?;
+                            },
+                            "creation date" => {
+                                torrent_meta.creation_date = value.get_number()?;
+                            }
+                            "info" => {
+                                match value {
+                                    BValue::Dicts(info_value) => {
+                                        for info_entries in info_value{
+                                            let info_key = info_entries.0;
+                                            let info_value = info_entries.1;
+                                            let info_key =  match str::from_utf8(&info_key) {
+                                                Ok(strs) => strs,
+                                                Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing info key string")),
+                                            };
+                                            match info_key {
+                                                "length" => {
+                                                    torrent_meta.info.length = info_value.get_number()?;
+                                                },
+                                                "name" => {
+                                                    torrent_meta.info.name = info_value.get_text()?;
+                                                },
+                                                "piece length" => {
+                                                    torrent_meta.info.piece_length = info_value.get_number()?;
+                                                },
+                                                "pieces" => {
+                                                    torrent_meta.info.pieces = info_value.get_bytes()?;
+                                                },
+                                                _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict")),
+                                             }
+                                        }
+                                    }
+                                    _ => {
+                                        println!("Error parsing torrent info file !!");
+                                        return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict"));
+                                    }
+                                };
+                            }
+                            _ => println!("Unhandled cases"),
+                        }
+                    }
+                }
+                _ => {
+                    println!("Error parsing torrent file !!");
+                    return Err(io::Error::new(io::ErrorKind::Unsupported, "Top torrent file is not a dict"));
+                },
+            };
+            Ok(torrent_meta)
+        }
+
+}

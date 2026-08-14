@@ -1,7 +1,6 @@
 use std::io::{self};
 
-
-
+#[allow(dead_code)]
 pub enum BValue {
     Text(Vec<u8>),
     Number(i64),
@@ -9,9 +8,42 @@ pub enum BValue {
     Dicts(Vec<(Vec<u8>,BValue)>),
 }
 
-
+#[allow(dead_code)]
 impl BValue{
-    
+
+    pub fn get_text(self) -> Result<String, io::Error> {
+        let string_text = match self {
+            BValue::Text(data) => {
+                let data_string = match str::from_utf8(&data) {
+                    Ok(data) => data.to_string(),
+                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url string")),
+                };
+                data_string
+            },
+            _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url not a string")),
+        };
+        Ok(string_text)
+    }
+
+    pub fn get_number(self) -> Result<i64, io::Error>{
+        let number = match self {
+            BValue::Number(data) => {
+                data
+            },
+            _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing number")),
+        };
+        Ok(number)
+    }
+
+    pub fn get_bytes(self) -> Result<Vec<u8>,io::Error>{
+        match self {
+            BValue::Text(data) => {
+                Ok(data)
+            }
+            _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing number")),
+        }
+    }
+
     pub fn serialize(bytes: &[u8], pos: &mut usize ) -> Result<Self,io::Error> {
         match bytes[*pos] {
             b'i' => {
@@ -117,11 +149,13 @@ impl BValue{
         };
     }   
 
-
     pub fn printer(self) {
         match self {
             BValue::Text(val) => {
-                let string_text = str::from_utf8(&val).expect("Error while printing v8 as string");
+                let string_text = match str::from_utf8(&val) {
+                    Ok(text) => text,
+                    Err(_) => "hex data",
+                };
                 print!("'{}'",string_text);
             },
             BValue::Number(val) => {
@@ -144,7 +178,6 @@ impl BValue{
                     print!(" {} :",str::from_utf8(&key).unwrap());
                     value.printer();
                     println!("");
-
                 }
                 print!(" }} ");
             },
