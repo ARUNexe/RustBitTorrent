@@ -17,9 +17,13 @@ fn main() {
         }
     };
 
+
     let mut pos: usize = 0;
     let bvalue: BValue = BValue::serialize(&contents, &mut pos).expect("serialize method returned error");
-    let torrent = TorrentMeta::serialize(bvalue).expect("fUCKED TORRENT PARSING");
 
-    torrent.printer();
+    let torrentmeta1 = TorrentMeta::serialize(bvalue).expect("msg");
+
+    torrentmeta1.printer();
+
+    // torrent.printer();
 }

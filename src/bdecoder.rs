@@ -44,6 +44,54 @@ impl BValue{
         }
     }
 
+    pub fn encode(self) -> Result<Vec<u8>,io::Error> {
+        let mut result_bytes: Vec<u8> = Vec::new();
+        match self {
+            BValue::Dicts(dict) =>{
+                result_bytes.push(b'd');
+                for dict_values in dict{
+                    let mut dict_item_key = dict_values.0;
+                    let dict_item_value = dict_values.1;
+
+                    let dict_item_key_str =  match str::from_utf8(&dict_item_key) {
+                        Ok(strs) => strs,
+                        Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing dict key string")),
+                    };
+                    let dict_item_key_len = dict_item_key_str.len();
+                    let mut dict_item_key_len = dict_item_key_len.to_string().into_bytes();
+                    result_bytes.append(&mut dict_item_key_len);
+                    result_bytes.push(b':');
+                    result_bytes.append(&mut dict_item_key);
+                    let mut value_bytes =  dict_item_value.encode()?;
+                    result_bytes.append(&mut value_bytes);
+                }
+                result_bytes.push(b'e');
+            },
+            BValue::Text(mut text) => {
+                let text_string_len = text.len();
+                let mut text_string_len = text_string_len.to_string().into_bytes();
+                result_bytes.append(&mut text_string_len);
+                result_bytes.push(b':');
+                result_bytes.append(&mut text);
+            },
+            BValue::Lists(list) => {
+                result_bytes.push(b'l');
+                for list_values in list{
+                    let mut value_bytes =  list_values.encode()?;
+                    result_bytes.append(&mut value_bytes);
+                }
+                result_bytes.push(b'e');
+            }
+            BValue::Number(num ) => {
+                result_bytes.push(b'i');
+                let mut num_bytes = num.to_string().into_bytes();
+                result_bytes.append(&mut num_bytes);
+                result_bytes.push(b'e');
+            }
+        };
+        Ok(result_bytes)
+    }
+
     pub fn serialize(bytes: &[u8], pos: &mut usize ) -> Result<Self,io::Error> {
         match bytes[*pos] {
             b'i' => {
