@@ -1,4 +1,6 @@
 use crate::{bdecoder::BValue, torrentmeta::TorrentMeta};
+use sha1::{Sha1, Digest};
+
 
 use std::fs;
 mod bdecoder;
@@ -20,10 +22,19 @@ fn main() {
 
     let mut pos: usize = 0;
     let bvalue: BValue = BValue::serialize(&contents, &mut pos).expect("serialize method returned error");
+    // bvalue.printer();
+    let torrentmeta1 = TorrentMeta::serialize(&bvalue).expect("msg");
+    // torrentmeta1.printer();
 
-    let torrentmeta1 = TorrentMeta::serialize(bvalue).expect("msg");
+    // let encoded_bvalue = bvalue.encode().expect("Encoder error");
 
-    torrentmeta1.printer();
+    // println!("Info Hash = {:x?}",torrentmeta1.info_hash);
+
+    let mut hasher = Sha1::new();
+    hasher.update(torrentmeta1.info_hash);
+    let res = hasher.finalize();
+    println!("SHA-1: {:x}", res);
 
     // torrent.printer();
+
 }

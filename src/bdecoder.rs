@@ -11,7 +11,7 @@ pub enum BValue {
 #[allow(dead_code)]
 impl BValue{
 
-    pub fn get_text(self) -> Result<String, io::Error> {
+    pub fn get_text(&self) -> Result<String, io::Error> {
         let string_text = match self {
             BValue::Text(data) => {
                 let data_string = match str::from_utf8(&data) {
@@ -25,33 +25,33 @@ impl BValue{
         Ok(string_text)
     }
 
-    pub fn get_number(self) -> Result<i64, io::Error>{
+    pub fn get_number(&self) -> Result<i64, io::Error>{
         let number = match self {
             BValue::Number(data) => {
                 data
             },
             _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing number")),
         };
-        Ok(number)
+        Ok(*number)
     }
 
-    pub fn get_bytes(self) -> Result<Vec<u8>,io::Error>{
+    pub fn get_bytes(&self) -> Result<Vec<u8>,io::Error>{
         match self {
             BValue::Text(data) => {
-                Ok(data)
+                Ok(data.clone())
             }
             _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing number")),
         }
     }
 
-    pub fn encode(self) -> Result<Vec<u8>,io::Error> {
+    pub fn encode(&self) -> Result<Vec<u8>,io::Error> {
         let mut result_bytes: Vec<u8> = Vec::new();
         match self {
             BValue::Dicts(dict) =>{
                 result_bytes.push(b'd');
                 for dict_values in dict{
-                    let mut dict_item_key = dict_values.0;
-                    let dict_item_value = dict_values.1;
+                    let mut dict_item_key = dict_values.0.clone();
+                    let dict_item_value = &dict_values.1;
 
                     let dict_item_key_str =  match str::from_utf8(&dict_item_key) {
                         Ok(strs) => strs,
@@ -67,7 +67,8 @@ impl BValue{
                 }
                 result_bytes.push(b'e');
             },
-            BValue::Text(mut text) => {
+            BValue::Text(text) => {
+                let mut text = text.clone();
                 let text_string_len = text.len();
                 let mut text_string_len = text_string_len.to_string().into_bytes();
                 result_bytes.append(&mut text_string_len);
@@ -197,17 +198,17 @@ impl BValue{
         };
     }   
 
-    pub fn printer(self) {
+    pub fn printer(&self) {
         match self {
             BValue::Text(val) => {
-                let string_text = match str::from_utf8(&val) {
+                let string_text = match str::from_utf8(val) {
                     Ok(text) => text,
                     Err(_) => "hex data",
                 };
                 print!("'{}'",string_text);
             },
             BValue::Number(val) => {
-                print!(" {} ",val);
+                print!("{} ",*val);
             },
             BValue::Lists(val) => {
                 print!(" [ ");
@@ -221,8 +222,8 @@ impl BValue{
                 println!("");
 
                 for set in val{
-                    let key = set.0;
-                    let value = set.1; 
+                    let key = set.0.clone();
+                    let value = &set.1; 
                     print!(" {} :",str::from_utf8(&key).unwrap());
                     value.printer();
                     println!("");

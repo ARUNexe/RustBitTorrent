@@ -16,6 +16,7 @@ pub struct TorrentMeta{
     pub created_by: String,
     pub creation_date: i64,
     pub info: InfoHash,
+    pub info_hash: Vec<u8>,
 }
 
 impl TorrentMeta {
@@ -36,14 +37,14 @@ impl TorrentMeta {
             
         }
 
-        pub fn serialize(bvalue: BValue) -> Result<Self, io::Error>{
+        pub fn serialize(bvalue: &BValue) -> Result<Self, io::Error>{
         
             let mut torrent_meta = TorrentMeta::default();
             match bvalue {
                 BValue::Dicts(dict) => {
                     for entries in dict{
-                        let key = entries.0;
-                        let value = entries.1;
+                        let key = entries.0.clone();
+                        let value = &entries.1;
                         let key_string = match str::from_utf8(&key) {
                             Ok(strs) => strs,
                             Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url string")),
@@ -62,11 +63,14 @@ impl TorrentMeta {
                                 torrent_meta.creation_date = value.get_number()?;
                             }
                             "info" => {
+
+                                torrent_meta.info_hash = value.encode()?;
+
                                 match value {
                                     BValue::Dicts(info_value) => {
                                         for info_entries in info_value{
-                                            let info_key = info_entries.0;
-                                            let info_value = info_entries.1;
+                                            let info_key = info_entries.0.clone();
+                                            let info_value = &info_entries.1;
                                             let info_key =  match str::from_utf8(&info_key) {
                                                 Ok(strs) => strs,
                                                 Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing info key string")),
