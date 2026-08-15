@@ -24,7 +24,6 @@ impl BValue{
         };
         Ok(string_text)
     }
-
     pub fn get_number(&self) -> Result<i64, io::Error>{
         let number = match self {
             BValue::Number(data) => {
@@ -34,7 +33,6 @@ impl BValue{
         };
         Ok(*number)
     }
-
     pub fn get_bytes(&self) -> Result<Vec<u8>,io::Error>{
         match self {
             BValue::Text(data) => {
@@ -93,7 +91,7 @@ impl BValue{
         Ok(result_bytes)
     }
 
-    pub fn serialize(bytes: &[u8], pos: &mut usize ) -> Result<Self,io::Error> {
+    pub fn decode(bytes: &[u8], pos: &mut usize ) -> Result<Self,io::Error> {
         match bytes[*pos] {
             b'i' => {
                 *pos = *pos + 1; // i
@@ -144,7 +142,7 @@ impl BValue{
                 let mut lists = Vec::new();
                 *pos = *pos + 1; // for l
                 while bytes[*pos] != b'e' {
-                    let entry = Self::serialize(bytes, pos);
+                    let entry = Self::decode(bytes, pos);
                     match entry {
                         Ok(val) => {
                             lists.push(val);
@@ -161,7 +159,7 @@ impl BValue{
                 let mut dicts: Vec<(Vec<u8>,BValue)>  = Vec::new(); 
                 *pos = *pos + 1; // for l
                 while bytes[*pos] != b'e' {
-                    let key_entry = Self::serialize(bytes, pos);
+                    let key_entry = Self::decode(bytes, pos);
                     let dict_key;
                     match key_entry {
                         Ok(val) => {
@@ -176,7 +174,7 @@ impl BValue{
                             return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
                         }
                     }
-                    let val_entry = Self::serialize(bytes, pos);
+                    let val_entry = Self::decode(bytes, pos);
                     let dict_value;
                     match val_entry {
                         Ok(val) => {

@@ -1,5 +1,5 @@
 use std::io;
-use crate::bdecoder::BValue;
+use crate::bencoder::BValue;
 
 #[derive(Default)]
 pub struct InfoHash{
@@ -19,26 +19,9 @@ pub struct TorrentMeta{
     pub info_hash: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl TorrentMeta {
-
-        pub fn printer(self){
-
-
-            println!("INFO - Pieces : {:02x?}",self.info.pieces);
-            println!("INFO - Length : {}",self.info.length);
-            println!("INFO - Name : {}",self.info.name);
-            println!("INFO - Piece Length : {}",self.info.piece_length);
-
-            println!("Anounce URL : {}",self.anounce_url);
-            println!("Comment : {}",self.comment);
-            println!("Created By : {}",self.created_by);
-            println!("Creation Date : {}",self.creation_date);
-
-            
-        }
-
-        pub fn serialize(bvalue: &BValue) -> Result<Self, io::Error>{
-        
+        pub fn create(bvalue: &BValue) -> Result<Self, io::Error>{
             let mut torrent_meta = TorrentMeta::default();
             match bvalue {
                 BValue::Dicts(dict) => {
@@ -63,7 +46,6 @@ impl TorrentMeta {
                                 torrent_meta.creation_date = value.get_number()?;
                             }
                             "info" => {
-
                                 torrent_meta.info_hash = value.encode()?;
 
                                 match value {
@@ -98,7 +80,7 @@ impl TorrentMeta {
                                     }
                                 };
                             }
-                            _ => println!("Unhandled cases"),
+                            _ => println!("Unhandled param, non mandatory"),
                         }
                     }
                 }
@@ -108,6 +90,18 @@ impl TorrentMeta {
                 },
             };
             Ok(torrent_meta)
+        }
+
+        pub fn printer(&self){
+            println!("INFO - Pieces : {:02x?}",self.info.pieces);
+            println!("INFO - Length : {}",self.info.length);
+            println!("INFO - Name : {}",self.info.name);
+            println!("INFO - Piece Length : {}",self.info.piece_length);
+
+            println!("Anounce URL : {}",self.anounce_url);
+            println!("Comment : {}",self.comment);
+            println!("Created By : {}",self.created_by);
+            println!("Creation Date : {}",self.creation_date);
         }
 
 }
