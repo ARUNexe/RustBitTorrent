@@ -70,7 +70,7 @@ impl TorrentMeta {
                                                 "pieces" => {
                                                     torrent_meta.info.pieces = info_value.get_bytes()?;
                                                 },
-                                                _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict")),
+                                                _ => println!("Unsupported key in info_hash"),
                                              }
                                         }
                                     }

@@ -114,7 +114,7 @@ impl BValue{
                 return Ok(BValue::Number(number));
 
             },
-            b'0'..b'9' => {
+            b'0'..=b'9' => {
                 let mut str_intpool: Vec<u8> = Vec::new();
                 while bytes[*pos] != b':' {
                     str_intpool.push(bytes[*pos]);
@@ -126,7 +126,7 @@ impl BValue{
                     Ok(val) => match val.parse::<i64>() {
                         Ok(val2) => val2,
                         Err(valfuck) => {
-                            println!("Fucker is {}",valfuck);
+                            println!("Error parsing number: {}", valfuck);
                             return Err(io::Error::new(io::ErrorKind::Unsupported, " 1 Number parsing failed"));
                         },
                     },
@@ -148,10 +148,10 @@ impl BValue{
                             lists.push(val);
                         }
                         Err(_) => {
-                            return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
+                            return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed 1"));
                         }
-                    }
-                }
+                    };
+                };
                 *pos = *pos + 1; // for e
                 return Ok(BValue::Lists(lists))
             }
@@ -171,7 +171,7 @@ impl BValue{
                             };
                         },
                         Err(_) => {
-                            return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
+                            return Err(io::Error::new(io::ErrorKind::Unsupported, "Dict parsing failed 2"));
                         }
                     }
                     let val_entry = Self::decode(bytes, pos);
@@ -181,7 +181,7 @@ impl BValue{
                             dict_value = val;
                         },
                         Err(_) => {
-                            return Err(io::Error::new(io::ErrorKind::Unsupported, "List parsing failed"));
+                            return Err(io::Error::new(io::ErrorKind::Unsupported, "Dict parsing failed 3"));
                         }
                     }
                     let key_bytes = dict_key;
@@ -191,6 +191,7 @@ impl BValue{
                 return Ok(BValue::Dicts(dicts))
             }
             _ => {
+                println!("Rest of the bytes is {}",bytes[*pos]);
                 return Err( io::Error::new(io::ErrorKind::Unsupported, "No kind of message found"));
             },
         };

@@ -1,15 +1,18 @@
-use crate::{bencoder::BValue, torrentmeta::TorrentMeta};
-use sha1::{Sha1, Digest};
-
-
-use std::fs;
+use std::{fs, io};
+use rand::distr::{Alphanumeric, SampleString};
 mod bencoder;
 mod torrentmeta;
+mod communication;
+mod parsers;
 
 
-fn main() {
+use bencoder::BValue;
+use torrentmeta::TorrentMeta;
 
-    let _test_value: &[u8] = b"d4:name5:Aruns3:agei24e5:peersl6:peer01i6881e6:peer02i6882ee4:infod4:name4:test6:lengthi1024e6:piecesl20:abcdefghijklmnopqrst20:uvwxyzabcdefghijklmneeee";
+
+#[tokio::main]
+async fn main() -> Result<(), io::Error> {
+
     let torrent_path = "test_torrent_files/ubuntu_26_04_amd64.torrent";
     let contents = match fs::read(torrent_path){
         Ok(data) => data,
@@ -19,15 +22,18 @@ fn main() {
         }
     };
 
-
     let mut pos: usize = 0;
-    let bvalue: BValue = BValue::decode(&contents, &mut pos).expect("serialize method returned error");
-    // bvalue.printer();
-    let torrentmeta1 = TorrentMeta::create(&bvalue).expect("msg");
+    let bvalue: BValue = match BValue::decode(&contents, &mut pos) {
+        Ok(bvalue) => bvalue,
+        Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Torrent file bencode parsing failed")),
+    };
+    let torrentmeta = match TorrentMeta::create(&bvalue) {
+        Ok(torrentmeta) => torrentmeta,
+        Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Torrent metadata parsing failed")),
+    };
     // torrentmeta1.printer();
 
-    let mut hasher = Sha1::new();
-    hasher.update(torrentmeta1.info_hash);
-    let res = hasher.finalize();
-    println!("SHA-1: {:x}", res);
+    let peer_id = Alphanumeric.sample_string(&mut rand::rng(), 20);
+    communication::get_peer_info_from_tracker(&torrentmeta,peer_id).await?;
+    Ok(())
 }
