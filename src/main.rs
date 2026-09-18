@@ -1,13 +1,25 @@
 use std::{fs, io};
 use rand::distr::{Alphanumeric, SampleString};
+
+
 mod bencoder;
 mod torrentmeta;
-mod communication;
-mod parsers;
+mod peer;
+mod comms;
+mod utils;
 
 
 use bencoder::BValue;
 use torrentmeta::TorrentMeta;
+
+use crate::peer::PeerInfo;
+use crate::peer::Peer;
+use crate::comms::comms_peer;
+use crate::comms::comms_tracker;
+
+
+
+
 
 
 #[tokio::main]
@@ -33,7 +45,18 @@ async fn main() -> Result<(), io::Error> {
     };
     // torrentmeta1.printer();
 
+    let info_hash = utils::get_sha1_info_hash(&torrentmeta.info_hash);
+
     let peer_id = Alphanumeric.sample_string(&mut rand::rng(), 20);
-    communication::get_peer_info_from_tracker(&torrentmeta,peer_id).await?;
+    let peer_info: PeerInfo = comms_tracker::get_peer_info_from_tracker(&torrentmeta,peer_id.clone()).await?;
+
+    let first_peer: Peer = peer_info.get_peer_at_n(0);
+
+    // println!("Peer ip : {}",first_peer.ip);
+    // println!("Peer id : {:?}",first_peer.peer_id);
+    // println!("Peer [prt : {}",first_peer.port);
+
+    comms_peer::send_handshake_to_peer(first_peer,info_hash, peer_id).await;
+
     Ok(())
 }

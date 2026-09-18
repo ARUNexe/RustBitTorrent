@@ -1,32 +1,23 @@
+use reqwest::Client;
 use std::io;
 
-use sha1::{Sha1, Digest};
-use reqwest::Client;
 
-use crate::{bencoder::BValue, parsers::{PeerInfo}, torrentmeta::TorrentMeta};
-
-fn percent_encode(bytes: &[u8]) -> String {
-    bytes.iter()
-        .map(|b| format!("%{:02X}", b))
-        .collect()
-}
+use crate::TorrentMeta;
+use crate::PeerInfo;
+use crate::utils;
+use crate::bencoder::BValue;
 
 
 pub async fn get_peer_info_from_tracker(torrent: &TorrentMeta,peer_id: String) -> Result<PeerInfo,io::Error> {    
-    
-    
     // info hash creation
-    let info_hash = torrent.info_hash.to_vec();
-    let mut hasher = Sha1::new();
-    hasher.update(&info_hash);
-    let info_hash_sha1: sha1::digest::generic_array::GenericArray<u8, sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UTerm, sha1::digest::consts::B1>, sha1::digest::consts::B0>, sha1::digest::consts::B1>, sha1::digest::consts::B0>, sha1::digest::consts::B0>> = hasher.finalize();
-    
+    let info_hash_sha1 = utils::get_sha1_info_hash(&torrent.info_hash);
+
     // tracker params initialization
     let port: i32 = 6882;
     let uploaded = 0;
     let downloaded = 0;
     let left = torrent.info.length;
-    let encoded_info_hash = percent_encode(&info_hash_sha1);
+    let encoded_info_hash = utils::percent_encode(&info_hash_sha1);
     
     // Requesitng the tracker
     let client = Client::new();
