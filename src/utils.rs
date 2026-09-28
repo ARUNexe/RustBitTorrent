@@ -17,3 +17,25 @@ pub fn percent_encode(bytes: &[u8]) -> String {
 }
 
 
+pub fn is_peer_handshake_successfull(buffer: &[u8], info_hash: &Vec<u8>) -> bool {
+    let protocol_str = "BitTorrent protocol"; 
+    
+    let message_from_peer = str::from_utf8(&buffer[1..20]).expect("peer message to string fucked");
+    if message_from_peer != protocol_str {
+        println!("Peer handshake protocol string mismatch");
+        return false;
+    }
+
+    let peer_info_hash = &buffer[28..48].to_vec();
+    // println!("Received peer info hash = {:?}",peer_info_hash);
+    // println!("Our peer info hash = {:?}",info_hash);
+
+    if peer_info_hash != info_hash{
+        println!("Peer handshake info hash mismatch");
+        return false;
+    }
+    
+    return true;
+}
+
+

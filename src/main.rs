@@ -19,9 +19,6 @@ use crate::comms::comms_tracker;
 
 
 
-
-
-
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
 
@@ -56,7 +53,11 @@ async fn main() -> Result<(), io::Error> {
     // println!("Peer id : {:?}",first_peer.peer_id);
     // println!("Peer [prt : {}",first_peer.port);
 
-    comms_peer::send_handshake_to_peer(first_peer,info_hash, peer_id).await;
+    let is_successfull = comms_peer::send_handshake_to_peer(first_peer,&info_hash, peer_id).await;
+
+    if is_successfull{
+        println!("Peer handshake Successfull");
+    }
 
     Ok(())
 }

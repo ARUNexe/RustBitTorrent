@@ -3,12 +3,14 @@ use tokio::{io::AsyncReadExt, net::TcpStream};
 use tokio::io::AsyncWriteExt;
 
 use crate::peer::Peer;
+use crate::utils::{is_peer_handshake_successfull};
 
-pub async fn send_handshake_to_peer(peer: Peer,info_hash: Vec<u8>,peer_id: String) {
+pub async fn send_handshake_to_peer(peer: Peer,info_hash: &Vec<u8>,peer_id: String) -> bool {
     let mut handshake_bytes: Vec<u8> = Vec::with_capacity(68);
 
     let length: u8 = 19;
-    let protocol:&[u8]= "BitTorrent protocol".as_bytes();
+    let protocol_str = "BitTorrent protocol"; 
+    let protocol: &[u8] = protocol_str.as_bytes();
     let reserved: [u8; 8] = [0; 8]; 
 
     handshake_bytes.push(length);
@@ -27,8 +29,6 @@ pub async fn send_handshake_to_peer(peer: Peer,info_hash: Vec<u8>,peer_id: Strin
     let mut buffer = [0u8; 68];
     stream.read_exact(&mut buffer).await.expect("Awaiting message fucked");
 
-    let message_from_peer = str::from_utf8(&buffer[1..20]).expect("peer message to string fucked");
-
-    println!("Message length: {}", message_from_peer);
-    
+    let is_successfull = is_peer_handshake_successfull(&buffer,info_hash);
+    is_successfull
 }
