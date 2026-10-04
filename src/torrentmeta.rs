@@ -75,7 +75,7 @@ impl TorrentMeta {
                                         }
                                     }
                                     _ => {
-                                        println!("Error parsing torrent info file !!");
+                                        println!("Error parsing torrent info file !!!!!");
                                         return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict"));
                                     }
                                 };
@@ -93,15 +93,19 @@ impl TorrentMeta {
         }
 
         pub fn printer(&self){
-            println!("INFO - Pieces : {:02x?}",self.info.pieces);
+            // println!("INFO - Pieces : {:02x?}",self.info.pieces);
             println!("INFO - Length : {}",self.info.length);
             println!("INFO - Name : {}",self.info.name);
             println!("INFO - Piece Length : {}",self.info.piece_length);
+            // println!("INFO - Pieces len: {:?}",self.info.pieces);
+
 
             println!("Anounce URL : {}",self.anounce_url);
             println!("Comment : {}",self.comment);
             println!("Created By : {}",self.created_by);
             println!("Creation Date : {}",self.creation_date);
+
+            // println!("Info hash = {:?}",self.info_hash);
         }
 
 }

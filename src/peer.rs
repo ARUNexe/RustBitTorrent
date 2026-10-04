@@ -15,6 +15,9 @@ pub struct Peer {
     pub ip: IpAddr,
     pub port: u16,
     pub peer_id: Vec<u8>,
+    pub peer_bitfield: Vec<u8>,
+    pub ischoked: bool,
+    pub intrested: bool,
 }
 
 
@@ -33,17 +36,39 @@ impl PeerInfo {
                         match key_string {
                             "complete" => {
                                 peer_info.complete = value.get_number()?;
-                                // println!("Peer info complete is : {}",peer_info.complete);
+                                println!("Peer info complete is : {}",peer_info.complete);
                             },
                             "incomplete" => {
                                 peer_info.incomplete = value.get_number()?;
-                                // println!("Peer info incomplete is : {}",peer_info.incomplete);
+                                println!("Peer info incomplete is : {}",peer_info.incomplete);
                             },
                             "interval" => {
                                 peer_info.interval = value.get_number()?;
-                                // println!("Peer info interval is : {}",peer_info.interval);
+                                println!("Peer info interval is : {}",peer_info.interval);
+                            },
+                            "min interval" => {
+                                // peer_info.interval = value.get_number()?;
+                                println!("Peer info min interval is : {}",peer_info.interval);
                             },
                             "peers" => {
+                                match value {
+                                    BValue::Lists(entries) => {
+                                        println!("[tracker peers] format=list entries={}", entries.len());
+                                    }
+                                    BValue::Text(bytes) => {
+                                        let prefix_len = bytes.len().min(24);
+                                        println!(
+                                            "[tracker peers] format=byte-string bytes={} compact_ipv4_records={} remainder={} prefix={:02x?}",
+                                            bytes.len(),
+                                            bytes.len() / 6,
+                                            bytes.len() % 6,
+                                            &bytes[..prefix_len]
+                                        );
+                                    }
+                                    BValue::Number(_) => println!("[tracker peers] unexpected format=integer"),
+                                    BValue::Dicts(_) => println!("[tracker peers] unexpected format=dictionary"),
+                                }
+
                                 let mut peers: Vec<Peer> = Vec::new();
                                 match value {
                                     BValue::Lists(info_value) => {
@@ -54,6 +79,9 @@ impl PeerInfo {
                                                         ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                                                         port: 0,
                                                         peer_id: vec![0],
+                                                        ischoked: true,
+                                                        peer_bitfield: vec![],
+                                                        intrested: false,
                                                     };
                                                     for info_entries in info_value.iter(){
                                                         let info_key = info_entries.0.clone();
@@ -77,11 +105,11 @@ impl PeerInfo {
                                                             },
                                                             "port" => {
                                                                 peer.port = info_value.get_number()? as u16;
-                                                                // println!("Port is {}",peer.port);
+                                                                println!("Port is {}",peer.port);
                                                             },
                                                             "peer id" => {
                                                                 peer.peer_id = info_value.get_bytes()?;
-                                                                // println!("Peer id is : {:?}",peer.peer_id);
+                                                                println!("Peer id is : {:?}",peer.peer_id);
                                                             },
                                                             _ => println!("Unsupported key in info_hash"), 
                                                         }
@@ -91,15 +119,37 @@ impl PeerInfo {
                                                 _ => println!("Unsupported key in info_hash in peer list hashing"),
                                             }
                                         }
-                                    }
+                                    },
+                                    BValue::Text(bytes) => {
+                                        if bytes.len() % 6 != 0 {
+                                            return Err(io::Error::new(
+                                                io::ErrorKind::InvalidData,
+                                                format!("compact IPv4 peer data has invalid length: {}", bytes.len()),
+                                            ));
+                                        }
+
+                                        for record in bytes.chunks_exact(6) {
+                                            let ip = Ipv4Addr::new(record[0], record[1], record[2], record[3]);
+                                            let port = u16::from_be_bytes([record[4], record[5]]);
+
+                                            peers.push(Peer {
+                                                ip: IpAddr::V4(ip),
+                                                port,
+                                                peer_id: Vec::new(),
+                                                peer_bitfield: Vec::new(),
+                                                ischoked: true,
+                                                intrested: false,
+                                            });
+                                        }
+                                    },
                                     _ => {
-                                        println!("Error parsing torrent info file !!");
-                                        return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict"));
-                                    }
+                                        println!("Error parsing torrent info file unknow type in peer");
+                                        // return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict"));
+                                    },
                                 };
                                 peer_info.peers = peers;
                             }
-                            _ => println!("Unhandled param, non mandatory"),
+                            _ => println!("Unhandled param, non mandatory {}",key_string),
                         }
                     }
                 }
