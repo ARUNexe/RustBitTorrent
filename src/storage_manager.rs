@@ -30,7 +30,7 @@ pub struct StorageManager {
 
 impl StorageManager {
     pub async fn init(filename: String,piece_length: u64,shared_state : Arc<Mutex<download_state::DownloadState>>) -> Result<Self,std::io::Error> {
-        let mut file = match File::create(filename).await {
+        let file = match File::create(filename).await {
             Ok(f) => f,
             Err(_) => {
                 println!("Error opening output file");
@@ -71,7 +71,7 @@ pub async fn write_piece_to_file(storage_manager: &mut StorageManager, completed
             // println!("Piece write to the file success Piece indes : {}",completed_piece.index);
         },
         Err(e) => {
-            // println!("Error writing piece : {} to file error : {:?}",completed_piece.index,e);
+            println!("Error writing piece : {} to file error : {:?}",completed_piece.index,e);
             return false;
         }
     }
