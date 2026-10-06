@@ -43,3 +43,16 @@ cargo run -- path/to/file.torrent --benchmark
 1. Seeding is not implemented
 2. Resume support is not implemented
 3. Multi-file torrents are not currently supported
+
+
+## Benchmark
+
+Recorded while downloading `emmabuntus-de6-core-amd64-13.6-1.02.iso.torrent`:
+
+![RustBitTorrent benchmark for the Emmabuntüs ISO](benchmark_img/emmabuntus-de6-core-amd64-13.6-1.02.iso.png)
+
+1. Max Active peer observed - 14
+2. Max download speed - 0.22MB/s (14 peers)
+
+
+
