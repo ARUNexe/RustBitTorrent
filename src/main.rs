@@ -1,9 +1,8 @@
 use std::{fs};
 use std::env;
 use rand::distr::{Alphanumeric, SampleString};
-use tokio::sync::mpsc;
 use std::{net::SocketAddr};
-use tokio::{net::TcpStream};
+use tokio::{sync::mpsc,net::TcpStream};
 use std::sync::{Arc,Mutex};
 
 
@@ -14,14 +13,6 @@ mod comms;
 mod utils;
 mod download_state;
 mod storage_manager;
-use bencoder::BValue;
-use torrentmeta::TorrentMeta;
-use crate::peer::PeerInfo;
-use crate::peer::Peer;
-use crate::comms::comms_peer;
-use crate::comms::comms_tracker;
-use crate::storage_manager::CompletedPiece;
-
 
 #[tokio::main]
 async fn main() {
@@ -50,7 +41,7 @@ async fn main() {
 
     // TORRENT FILE PARSIN
     let mut pos: usize = 0;
-    let bvalue: BValue = match BValue::decode(&contents, &mut pos) {
+    let bvalue: bencoder::BValue = match bencoder::BValue::decode(&contents, &mut pos) {
         Ok(bvalue) => bvalue,
         Err(e) => {
             println!("Torrent file Bencoder parsing failed : {}",e);
@@ -58,7 +49,7 @@ async fn main() {
         }
     };
 
-    let torrentmeta = match TorrentMeta::create(&bvalue) {
+    let torrentmeta = match torrentmeta::TorrentMeta::create(&bvalue) {
         Ok(torrentmeta) => torrentmeta,
         // Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Torrent metadata parsing failed")),
         Err(e) => {
@@ -78,7 +69,7 @@ async fn main() {
 
     // PEER COMMUNICATION
     let peer_id = Alphanumeric.sample_string(&mut rand::rng(), 20);
-    let peer_info: PeerInfo = match comms_tracker::get_peer_info_from_tracker(&torrentmeta,peer_id.clone()).await {
+    let peer_info: peer::PeerInfo = match comms::comms_tracker::get_peer_info_from_tracker(&torrentmeta,peer_id.clone()).await {
         Ok(pi) => {pi},
         Err(e) => {
             println!("Error getting peerinfo from tracker: {:?}",e);
@@ -87,7 +78,7 @@ async fn main() {
     };
 
     // STORAGE HANDLERS
-    let (storgee_tx, storage_rx ) = mpsc::channel::<CompletedPiece>(32);    
+    let (storgee_tx, storage_rx ) = mpsc::channel::<storage_manager::CompletedPiece>(32);    
     let storage_manager = match storage_manager::StorageManager::init(torrentmeta.info.name, torrentmeta.info.piece_length as u64, shared_state.clone()).await {
         Ok(sm) => {sm},
         Err(e) => {
@@ -103,7 +94,7 @@ async fn main() {
     let mut peer_join_handles = Vec::new();
     for i in 0..peer_info.peers.len(){
 
-        let peer: Peer = peer_info.get_peer_at_n(i);    
+        let peer: peer::Peer = peer_info.get_peer_at_n(i);    
         let addr: SocketAddr = SocketAddr::new(peer.ip, peer.port);
     
         let stream = match TcpStream::connect(addr).await {
@@ -120,10 +111,10 @@ async fn main() {
         let piece_length = torrentmeta.info.piece_length;
         let piece_hash = torrentmeta.info.pieces.clone();
         let total_data_size = torrentmeta.info.length;
-        let peer_storgee_tx: mpsc::Sender<CompletedPiece>  = storgee_tx.clone();
+        let peer_storgee_tx: mpsc::Sender<storage_manager::CompletedPiece>  = storgee_tx.clone();
     
         let peer_handle = tokio::spawn(async move {
-            comms_peer::handle_peer(peer,info_hash_c, my_peerid_c,stream, ss_c,piece_length,piece_hash,peer_storgee_tx,total_data_size).await;
+            comms::comms_peer::handle_peer(peer,info_hash_c, my_peerid_c,stream, ss_c,piece_length,piece_hash,peer_storgee_tx,total_data_size).await;
         });
         peer_join_handles.push(peer_handle);
     }

@@ -1,18 +1,12 @@
 use std::io;
 use std::sync::Mutex;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::net::tcp::{OwnedWriteHalf,OwnedReadHalf};
+use tokio::{sync::mpsc,io::AsyncWriteExt, io::AsyncReadExt, net::TcpStream};  
 
 
-use tokio::net::tcp::OwnedWriteHalf;
-use tokio::{io::AsyncReadExt, net::TcpStream};  
-use tokio::io::AsyncWriteExt;
-use tokio::net::tcp::OwnedReadHalf;
-
-use crate::utils::{is_peer_handshake_successfull};
-use crate::download_state::DownloadState;
+use crate::utils::{is_peer_handshake_successfull,get_sha1};
 use crate::peer::Peer;
-use crate::utils::get_sha1;
 use crate::download_state;
 use crate::storage_manager::{CompletedPiece};
 
@@ -154,7 +148,7 @@ fn block_size_for_request( piece_index: u32, offset: u32, total_pieces: u32, tot
 }
 
 
-pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,mut stream: TcpStream  ,shared_state: Arc<Mutex<DownloadState>>,piece_length: i64, piece_hash: Vec<u8>,storage_sender: mpsc::Sender<CompletedPiece>,total_data_size: i64) {
+pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,mut stream: TcpStream  ,shared_state: Arc<Mutex<download_state::DownloadState>>,piece_length: i64, piece_hash: Vec<u8>,storage_sender: mpsc::Sender<CompletedPiece>,total_data_size: i64) {
     println!("Running handle peer for peer_id {:?}",&peer.peer_id);
     let success = send_handshake_to_peer(&info_hash, &my_peerid_c, &mut stream).await;
 

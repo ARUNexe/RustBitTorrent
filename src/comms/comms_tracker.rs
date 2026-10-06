@@ -2,8 +2,8 @@ use reqwest::Client;
 use std::io;
 
 
-use crate::TorrentMeta;
-use crate::PeerInfo;
+use crate::torrentmeta::TorrentMeta;
+use crate::peer::PeerInfo;
 use crate::utils;
 use crate::bencoder::BValue;
 

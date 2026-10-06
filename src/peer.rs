@@ -1,4 +1,4 @@
-use crate::BValue;
+use crate::bencoder::BValue;
 use std::{io, net::{IpAddr, Ipv4Addr}, vec};
 
 
