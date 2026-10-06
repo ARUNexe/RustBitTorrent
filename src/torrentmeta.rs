@@ -99,7 +99,6 @@ impl TorrentMeta {
             println!("INFO - Piece Length : {}",self.info.piece_length);
             // println!("INFO - Pieces len: {:?}",self.info.pieces);
 
-
             println!("Anounce URL : {}",self.announce_url);
             println!("Comment : {}",self.comment);
             println!("Created By : {}",self.created_by);

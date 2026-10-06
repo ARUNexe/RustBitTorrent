@@ -1,5 +1,4 @@
 use std::io;
-// use tokio::fs;
 use std::sync::{Arc,Mutex};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -7,13 +6,7 @@ use tokio::io::AsyncSeekExt;
 use tokio::sync::mpsc::Receiver;
 use std::io::SeekFrom;
 
-
-
-
 use crate::download_state;
-
-
-
 
 
 pub struct CompletedPiece {
@@ -50,9 +43,7 @@ impl StorageManager {
 
 pub async fn storagemanager_listener_loop(mut storage_manager: StorageManager, mut receiver: Receiver<CompletedPiece>) {
 
-    // println!("Listener Loop Running");
     while let Some(piece) = receiver.recv().await { 
-        // println!("Received piece from a peer: Piece index : {}",piece.index);
         write_piece_to_file(&mut storage_manager,piece).await;
     }
     

@@ -55,7 +55,7 @@ impl PeerInfo {
                                     BValue::Lists(entries) => {
                                         println!("[tracker peers] format=list entries={}", entries.len());
                                     }
-                                    BValue::Text(bytes) => {
+                                    BValue::Bytes(bytes) => {
                                         let prefix_len = bytes.len().min(24);
                                         println!(
                                             "[tracker peers] format=byte-string bytes={} compact_ipv4_records={} remainder={} prefix={:02x?}",
@@ -120,7 +120,7 @@ impl PeerInfo {
                                             }
                                         }
                                     },
-                                    BValue::Text(bytes) => {
+                                    BValue::Bytes(bytes) => {
                                         if bytes.len() % 6 != 0 {
                                             return Err(io::Error::new(
                                                 io::ErrorKind::InvalidData,

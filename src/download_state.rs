@@ -13,7 +13,7 @@ pub struct Piece{
 }
 
 pub struct DownloadState{
-    pub piece_count: i64,
+    pub piece_count: u64,
     pub pieces: Vec<Piece>,
 }
 
@@ -28,7 +28,7 @@ impl DownloadState {
         }
         let ds = DownloadState{
             pieces:vec_pieces,
-            piece_count: nb_pieces,
+            piece_count: nb_pieces as u64,
         };
         ds
     }

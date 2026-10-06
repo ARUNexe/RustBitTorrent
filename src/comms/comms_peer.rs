@@ -185,7 +185,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
     let mut current_piece: i64 = -1;
     let mut current_offset = 0;
     let mut current_piece_data = vec![0u8; piece_length as usize];
-    let mut current_piece_size = piece_length;
+    let mut current_piece_size = piece_length as usize;
 
     // Things needs to be reset after one block is downloaded
     let mut current_block_req_sent = false;
@@ -211,7 +211,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                             let received_piece_index = i32::from_be_bytes(msg[1..5].try_into().unwrap());
                             let received_block_offset = i32::from_be_bytes(msg[5..9].try_into().unwrap());
                             
-                            if received_block_offset != current_offset || received_piece_index != current_piece{
+                            if received_block_offset != current_offset || received_piece_index != current_piece as i32{
                                 println!("Piece index or offset mismatch dropping block");
                                 break;
                             }
@@ -303,13 +303,13 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                     if is_available {
                         ss.pieces[current_piece as usize].status = download_state::PieceStatus::Downloading;
                         println!("Downloading Piece {}",current_piece);
-                        let piece_size = if current_piece == nb_pieces - 1 {
+                        let piece_size = if current_piece == (nb_pieces as i64) - 1 {
                             (total_data_size - current_piece * piece_length) as usize
                         } else {
                             piece_length as usize
                         };
                         current_piece_data = vec![0u8; piece_size];
-                        current_piece_size = piece_size as i64;
+                        current_piece_size = piece_size;
                     }
                     else {
                         println!("Peer doesnot hava current piece: {}", is_available);

@@ -6,7 +6,7 @@ pub fn get_sha1(info: &Vec<u8>) ->Vec<u8> {
 
     let mut hasher = Sha1::new();
     hasher.update(info);
-    let info_hash_sha1: sha1::digest::generic_array::GenericArray<u8, sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UInt<sha1::digest::typenum::UTerm, sha1::digest::consts::B1>, sha1::digest::consts::B0>, sha1::digest::consts::B1>, sha1::digest::consts::B0>, sha1::digest::consts::B0>> = hasher.finalize();
+    let info_hash_sha1= hasher.finalize();
     info_hash_sha1.to_vec()
 }
 
@@ -25,10 +25,7 @@ pub fn is_peer_handshake_successfull(buffer: &[u8], info_hash: &Vec<u8>) -> bool
         println!("Peer handshake protocol string mismatch");
         return false;
     }
-
     let peer_info_hash = &buffer[28..48].to_vec();
-    // println!("Received peer info hash = {:?}",peer_info_hash);
-    // println!("Our peer info hash = {:?}",info_hash);
 
     if peer_info_hash != info_hash{
         println!("Peer handshake info hash mismatch");

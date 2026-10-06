@@ -2,7 +2,7 @@ use std::io::{self};
 
 #[allow(dead_code)]
 pub enum BValue {
-    Text(Vec<u8>),
+    Bytes(Vec<u8>),
     Number(i64),
     Lists(Vec<BValue>),
     Dicts(Vec<(Vec<u8>,BValue)>),
@@ -13,7 +13,7 @@ impl BValue{
 
     pub fn get_text(&self) -> Result<String, io::Error> {
         let string_text = match self {
-            BValue::Text(data) => {
+            BValue::Bytes(data) => {
                 let data_string = match str::from_utf8(&data) {
                     Ok(data) => data.to_string(),
                     Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url string")),
@@ -35,7 +35,7 @@ impl BValue{
     }
     pub fn get_bytes(&self) -> Result<Vec<u8>,io::Error>{
         match self {
-            BValue::Text(data) => {
+            BValue::Bytes(data) => {
                 Ok(data.clone())
             }
             _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing number")),
@@ -65,7 +65,7 @@ impl BValue{
                 }
                 result_bytes.push(b'e');
             },
-            BValue::Text(text) => {
+            BValue::Bytes(text) => {
                 let mut text = text.clone();
                 let text_string_len = text.len();
                 let mut text_string_len = text_string_len.to_string().into_bytes();
@@ -136,7 +136,7 @@ impl BValue{
                 let chars = &bytes[*pos..*pos+number as usize];
                 let chars = chars.to_vec();
                 *pos = *pos + number as usize;
-                return Ok(BValue::Text(chars));
+                return Ok(BValue::Bytes(chars));
             },
             b'l' => {
                 let mut lists = Vec::new();
@@ -164,7 +164,7 @@ impl BValue{
                     match key_entry {
                         Ok(val) => {
                             match val {
-                                BValue::Text(txt) => {
+                                BValue::Bytes(txt) => {
                                     dict_key = txt
                                 },
                                 _ => return Err(io::Error::new(io::ErrorKind::Unsupported, "Key is a non integer value")),
@@ -199,7 +199,7 @@ impl BValue{
 
     pub fn printer(&self) {
         match self {
-            BValue::Text(val) => {
+            BValue::Bytes(val) => {
                 let string_text = match str::from_utf8(val) {
                     Ok(text) => text,
                     Err(_) => "hex data",
