@@ -56,7 +56,7 @@ async fn main() {
     };
     torrentmeta.printer();
 
-    let info_hash = utils::get_sha1_info_hash(&torrentmeta.info_hash);
+    let info_hash = utils::get_sha1(&torrentmeta.info_hash);
 
     // SHARED STATE CTEATION
     let nb_pieces: i64 = ((torrentmeta.info.length as f64) / (torrentmeta.info.piece_length as f64)).ceil() as i64;

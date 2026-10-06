@@ -10,7 +10,7 @@ use crate::bencoder::BValue;
 
 pub async fn get_peer_info_from_tracker(torrent: &TorrentMeta,peer_id: String) -> Result<PeerInfo,io::Error> {    
     // info hash creation
-    let info_hash_sha1 = utils::get_sha1_info_hash(&torrent.info_hash);
+    let info_hash_sha1 = utils::get_sha1(&torrent.info_hash);
 
     // tracker params initialization
     let port: i32 = 6882;
@@ -23,7 +23,7 @@ pub async fn get_peer_info_from_tracker(torrent: &TorrentMeta,peer_id: String) -
     let client = Client::new();
     let url = format!(
         "{}?info_hash={}&peer_id={}&port={}&uploaded={}&downloaded={}&left={}",
-        torrent.anounce_url,
+        torrent.announce_url,
         encoded_info_hash,
         peer_id,
         port,

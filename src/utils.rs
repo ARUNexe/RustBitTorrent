@@ -2,7 +2,7 @@ use sha1::{Sha1, Digest};
 
 
 
-pub fn get_sha1_info_hash(info: &Vec<u8>) ->Vec<u8> {
+pub fn get_sha1(info: &Vec<u8>) ->Vec<u8> {
 
     let mut hasher = Sha1::new();
     hasher.update(info);

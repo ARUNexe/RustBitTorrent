@@ -12,12 +12,12 @@ use tokio::net::tcp::OwnedReadHalf;
 use crate::utils::{is_peer_handshake_successfull};
 use crate::download_state::DownloadState;
 use crate::peer::Peer;
-use crate::utils::get_sha1_info_hash;
+use crate::utils::get_sha1;
 use crate::download_state;
 use crate::storage_manager::{CompletedPiece};
 
 
-const BLOCKSIZE: i64 = 16384;
+const BLOCK_SIZE: i64 = 16384;
 
 pub async fn send_handshake_to_peer(info_hash: &Vec<u8>,peer_id: &String,stream:&mut TcpStream) -> bool {
     let mut handshake_bytes: Vec<u8> = Vec::with_capacity(68);
@@ -81,7 +81,7 @@ fn peer_has_piece(bitfield: &[u8], piece_index: usize) -> bool {
         .is_some_and(|byte| *byte & mask != 0)
 }
 
-async fn send_intrested(stream: &mut OwnedWriteHalf) -> std::io::Result<()> {
+async fn send_interested(stream: &mut OwnedWriteHalf) -> std::io::Result<()> {
     let message = [0,0,0,1,2];
     stream.write_all(&message).await?;
 
@@ -173,7 +173,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
     let nb_pieces;
     {
         let ss = shared_state.lock().unwrap();
-        nb_pieces = ss.nb_piece;
+        nb_pieces = ss.piece_count;
     }
     println!("Total number of pieces  = {}", nb_pieces);
 
@@ -204,14 +204,14 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                         }
                         else if msg[0] == 1 { // unchoke
                             println!("Peer send Unchoke");
-                            peer.ischoked = false;
+                            peer.is_choked = false;
                         }
                         else if msg[0] == 7 { // piece
 
                             let received_piece_index = i32::from_be_bytes(msg[1..5].try_into().unwrap());
                             let received_block_offset = i32::from_be_bytes(msg[5..9].try_into().unwrap());
                             
-                            if received_block_offset != current_offset || received_piece_index != current_piece as i32 {
+                            if received_block_offset != current_offset || received_piece_index != current_piece{
                                 println!("Piece index or offset mismatch dropping block");
                                 break;
                             }
@@ -233,7 +233,8 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                                 let end_idx = start_idx+20 as usize;
 
                                 let current_piece_verification_hash = &piece_hash[start_idx..end_idx].to_vec();
-                                let current_piece_hash = get_sha1_info_hash(&current_piece_data);
+                                let current_piece_hash = get_sha1(&current_piece_data);
+
 
                                 if current_piece_verification_hash == &current_piece_hash {
                                     
@@ -318,24 +319,24 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                     }
                 }
 
-                if peer.intrested == false {
-                    let res = send_intrested(&mut writer).await;
+                if peer.interested == false {
+                    let res = send_interested(&mut writer).await;
                     match res {
                         Ok(_) => {
-                            println!("Intrested message sent successfully");
-                            peer.intrested = true;
+                            println!("interested message sent successfully");
+                            peer.interested = true;
                         },
                         Err(_) => {
-                            println!("Error in sending Intrested message");
+                            println!("Error in sending interested message");
                             continue;
                         },
                     }
                 }
 
-                if !peer.ischoked{
+                if !peer.is_choked{
                     if current_block_req_sent == false
                     {
-                        let block_len = block_size_for_request(current_piece as u32,current_offset as u32,nb_pieces as u32,total_data_size as u64,piece_length as u32,BLOCKSIZE as u32);
+                        let block_len = block_size_for_request(current_piece as u32,current_offset as u32,nb_pieces as u32,total_data_size as u64,piece_length as u32,BLOCK_SIZE as u32);
                       
                         match send_block_request(&mut writer,current_piece,current_offset as i64,block_len as i32).await {
                             Ok(_) => {

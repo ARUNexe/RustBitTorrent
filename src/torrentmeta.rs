@@ -11,7 +11,7 @@ pub struct InfoHash{
 
 #[derive(Default)]
 pub struct TorrentMeta{
-    pub anounce_url: String,
+    pub announce_url: String,
     pub comment: String,
     pub created_by: String,
     pub creation_date: i64,
@@ -34,7 +34,7 @@ impl TorrentMeta {
                         };
                         match key_string {
                             "announce" => {
-                                torrent_meta.anounce_url = value.get_text()?;
+                                torrent_meta.announce_url = value.get_text()?;
                             },
                             "comment" => {
                                 torrent_meta.comment = value.get_text()?;
@@ -100,7 +100,7 @@ impl TorrentMeta {
             // println!("INFO - Pieces len: {:?}",self.info.pieces);
 
 
-            println!("Anounce URL : {}",self.anounce_url);
+            println!("Anounce URL : {}",self.announce_url);
             println!("Comment : {}",self.comment);
             println!("Created By : {}",self.created_by);
             println!("Creation Date : {}",self.creation_date);

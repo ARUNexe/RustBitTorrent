@@ -16,8 +16,8 @@ pub struct Peer {
     pub port: u16,
     pub peer_id: Vec<u8>,
     pub peer_bitfield: Vec<u8>,
-    pub ischoked: bool,
-    pub intrested: bool,
+    pub is_choked: bool,
+    pub interested: bool,
 }
 
 
@@ -79,9 +79,9 @@ impl PeerInfo {
                                                         ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
                                                         port: 0,
                                                         peer_id: vec![0],
-                                                        ischoked: true,
+                                                        is_choked: true,
                                                         peer_bitfield: vec![],
-                                                        intrested: false,
+                                                        interested: false,
                                                     };
                                                     for info_entries in info_value.iter(){
                                                         let info_key = info_entries.0.clone();
@@ -137,8 +137,8 @@ impl PeerInfo {
                                                 port,
                                                 peer_id: Vec::new(),
                                                 peer_bitfield: Vec::new(),
-                                                ischoked: true,
-                                                intrested: false,
+                                                is_choked: true,
+                                                interested: false,
                                             });
                                         }
                                     },
