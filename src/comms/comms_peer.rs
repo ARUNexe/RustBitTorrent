@@ -9,6 +9,7 @@ use crate::utils::{is_peer_handshake_successfull,get_sha1};
 use crate::peer::Peer;
 use crate::download_state;
 use crate::storage_manager::{CompletedPiece};
+use crate::benchmark::Benchmark;
 
 
 const BLOCK_SIZE: i64 = 16384;
@@ -148,7 +149,15 @@ fn block_size_for_request( piece_index: u32, offset: u32, total_pieces: u32, tot
 }
 
 
-pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,mut stream: TcpStream  ,shared_state: Arc<Mutex<download_state::DownloadState>>,piece_length: i64, piece_hash: Vec<u8>,storage_sender: mpsc::Sender<CompletedPiece>,total_data_size: i64) {
+struct ActivePeerGuard(Arc<Benchmark>);
+
+impl Drop for ActivePeerGuard {
+    fn drop(&mut self) {
+        self.0.peer_disconnected();
+    }
+}
+
+pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,mut stream: TcpStream  ,shared_state: Arc<Mutex<download_state::DownloadState>>,piece_length: i64, piece_hash: Vec<u8>,storage_sender: mpsc::Sender<CompletedPiece>,total_data_size: i64,benchmark: Arc<Benchmark>) {
     println!("Running handle peer for peer_id {:?}",&peer.peer_id);
     let success = send_handshake_to_peer(&info_hash, &my_peerid_c, &mut stream).await;
 
@@ -159,6 +168,8 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
         println!("My Peer id : {:?} Failed to connect in handshake",&peer.peer_id);
         return;
     }
+    benchmark.peer_connected();
+    let _active_peer_guard = ActivePeerGuard(benchmark.clone());
 
     let (reader, mut writer) = stream.into_split();
 
@@ -211,6 +222,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                             }
 
                             let block = &msg[9..];
+                            benchmark.add_received_bytes(block.len());
                             // println!("Received piece block: piece {received_piece_index}, offset {received_block_offset}, data {} bytes (message {} bytes)", block.len(), msg.len());
                             let start = received_block_offset as usize;
                             let end = start + block.len();
@@ -231,6 +243,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
 
 
                                 if current_piece_verification_hash == &current_piece_hash {
+                                    benchmark.add_verified_bytes(current_piece_data.len());
                                     
                                     let completed_piece = CompletedPiece {
                                         index : current_piece,

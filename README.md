@@ -32,6 +32,12 @@ cargo run -- path/to/file.torrent
 
 Without a path, the client uses `test_torrent_files/ContinuousTimeBayesianNetworkReasoningandLearningEngine.torrent`.
 
+Add `--benchmark` to report active and peak connected peers, received bytes, SHA-1-verified bytes, and live download speed once per second, followed by the average received-byte speed at shutdown:
+
+```sh
+cargo run -- path/to/file.torrent --benchmark
+```
+
 ## Current Limitations
 
 1. Seeding is not implemented
