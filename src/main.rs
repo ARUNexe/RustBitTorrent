@@ -94,7 +94,8 @@ async fn main() {
                 let (active, peak, received_bytes, verified_bytes) = metrics.snapshot();
                 let speed = (received_bytes - previous_received_bytes) as f64 / (1024.0 * 1024.0);
                 previous_received_bytes = received_bytes;
-                println!("[benchmark] peers active={active} peak={peak} received={received_bytes} B verified={verified_bytes} B speed={speed:.2} MiB/s");
+                print!("\r[benchmark] peers active={active} peak={peak} received={received_bytes} B verified={verified_bytes} B speed={speed:.2} MiB/s");
+                std::io::Write::flush(&mut std::io::stdout()).unwrap();
             }
         }))
     } else {
@@ -153,7 +154,7 @@ async fn main() {
         let elapsed = benchmark.started.elapsed().as_secs_f64();
         let (active, peak, received_bytes, verified_bytes) = benchmark.snapshot();
         let average_speed = if elapsed > 0.0 { received_bytes as f64 / elapsed / (1024.0 * 1024.0) } else { 0.0 };
-        println!("[benchmark] complete elapsed={elapsed:.2}s peers active={active} peak={peak} received={received_bytes} B verified={verified_bytes} B average={average_speed:.2} MiB/s");
+        println!("\r[benchmark] complete elapsed={elapsed:.2}s peers active={active} peak={peak} received={received_bytes} B verified={verified_bytes} B average={average_speed:.2} MiB/s");
     }
     
 }

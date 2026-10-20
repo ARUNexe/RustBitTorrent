@@ -16,6 +16,8 @@ pub struct TorrentMeta{
     pub created_by: String,
     pub creation_date: i64,
     pub info: InfoHash,
+    pub url_list: Vec<Vec<u8>>,
+    pub announce_list: Vec<Vec<u8>>,
     pub info_hash: Vec<u8>,
 }
 
@@ -44,7 +46,50 @@ impl TorrentMeta {
                             },
                             "creation date" => {
                                 torrent_meta.creation_date = value.get_number()?;
-                            }
+                            },
+                            "announce-list" => {
+                                let mut anounce_list : Vec<Vec<u8>> = Vec::new();
+                                match value {
+                                    BValue::Lists(lst) => {
+                                        for bval in lst {
+                                            match bval {
+                                                BValue::Lists(bts) => {
+                                                    for tier in bts {
+                                                        match tier {
+                                                            BValue::Bytes(bts) => {
+                                                                anounce_list.push(bts.clone());
+                                                            }
+                                                            _ => {println!("[Warning] Announce-list tier doesnot contain strings");}
+                                                        }
+                                                    }
+                                                },
+                                                _ => {
+                                                    println!("[Warning] Announce-list is doesnot contain strings");
+                                                }
+                                            }
+                                        }
+                                    },
+                                    _ => {println!("[Warning] Announce-list is not a list")},
+                                }
+                                torrent_meta.announce_list = anounce_list;
+                            },
+                            "url-list" => { // BEP 19 WebSeed - HTTP/FTP Seeding, Not implemented yet: For future implementation
+                                let mut url_list : Vec<Vec<u8>> = Vec::new();
+                                match value {
+                                    BValue::Lists(lst) => {
+                                        for bval in lst {
+                                            match bval {
+                                                BValue::Bytes(bts) => {
+                                                    url_list.push(bts.clone());
+                                                }
+                                                _ => {println!("[Warning] url-list tier doesnot contain strings");}
+                                            }
+                                        }
+                                    },
+                                    _ => {println!("[Warning] url-list is not a list")},
+                                }
+                                torrent_meta.url_list = url_list;
+                            }, 
                             "info" => {
                                 torrent_meta.info_hash = value.encode()?;
 
@@ -80,7 +125,8 @@ impl TorrentMeta {
                                     }
                                 };
                             }
-                            _ => println!("Unhandled param, non mandatory"),
+                            _ => println!("Unhandled param, non mandatory {}",key_string),
+
                         }
                     }
                 }
@@ -103,6 +149,13 @@ impl TorrentMeta {
             println!("Comment : {}",self.comment);
             println!("Created By : {}",self.created_by);
             println!("Creation Date : {}",self.creation_date);
+
+            for i in self.announce_list.iter(){
+                println!("Anounce List : {:?}",str::from_utf8(i).expect("Error parsiong anounce list"));
+            }
+            for i in self.url_list.iter(){
+                println!("URL List : {:?}",str::from_utf8(i).expect("Error parsiong anounce list"));
+            }
 
             // println!("Info hash = {:?}",self.info_hash);
         }
