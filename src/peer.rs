@@ -22,147 +22,177 @@ pub struct Peer {
 
 
 impl PeerInfo {
-    pub fn create(bvalue: &BValue) -> Result<Self, io::Error>{
-            let mut peer_info =  PeerInfo::default();
-            match bvalue {
-                BValue::Dicts(dict) => {
-                    for entries in dict{
-                        let key = entries.0.clone();
-                        let value = &entries.1;
-                        let key_string = match str::from_utf8(&key) {
-                            Ok(strs) => strs,
-                            Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url string")),
-                        };
-                        match key_string {
-                            "complete" => {
-                                peer_info.complete = value.get_number()?;
-                                println!("Peer info complete is : {}",peer_info.complete);
-                            },
-                            "incomplete" => {
-                                peer_info.incomplete = value.get_number()?;
-                                println!("Peer info incomplete is : {}",peer_info.incomplete);
-                            },
-                            "interval" => {
-                                peer_info.interval = value.get_number()?;
-                                println!("Peer info interval is : {}",peer_info.interval);
-                            },
-                            "min interval" => {
-                                // peer_info.interval = value.get_number()?;
-                                println!("Peer info min interval is : {}",peer_info.interval);
-                            },
-                            "peers" => {
-                                match value {
-                                    BValue::Lists(entries) => {
-                                        println!("[tracker peers] format=list entries={}", entries.len());
-                                    }
-                                    BValue::Bytes(bytes) => {
-                                        let prefix_len = bytes.len().min(24);
-                                        println!(
-                                            "[tracker peers] format=byte-string bytes={} compact_ipv4_records={} remainder={} prefix={:02x?}",
-                                            bytes.len(),
-                                            bytes.len() / 6,
-                                            bytes.len() % 6,
-                                            &bytes[..prefix_len]
-                                        );
-                                    }
-                                    BValue::Number(_) => println!("[tracker peers] unexpected format=integer"),
-                                    BValue::Dicts(_) => println!("[tracker peers] unexpected format=dictionary"),
+    pub fn create_from_bvalue(bvalue: &BValue) -> Result<Self, io::Error>{
+        let mut peer_info =  PeerInfo::default();
+        match bvalue {
+            BValue::Dicts(dict) => {
+                for entries in dict{
+                    let key = entries.0.clone();
+                    let value = &entries.1;
+                    let key_string = match str::from_utf8(&key) {
+                        Ok(strs) => strs,
+                        Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing anounce url string")),
+                    };
+                    match key_string {
+                        "complete" => {
+                            peer_info.complete = value.get_number()?;
+                            println!("Peer info complete is : {}",peer_info.complete);
+                        },
+                        "incomplete" => {
+                            peer_info.incomplete = value.get_number()?;
+                            println!("Peer info incomplete is : {}",peer_info.incomplete);
+                        },
+                        "interval" => {
+                            peer_info.interval = value.get_number()?;
+                            println!("Peer info interval is : {}",peer_info.interval);
+                        },
+                        "min interval" => {
+                            // peer_info.interval = value.get_number()?;
+                            println!("Peer info min interval is : {}",peer_info.interval);
+                        },
+                        "peers" => {
+                            match value {
+                                BValue::Lists(entries) => {
+                                    println!("[tracker peers] format=list entries={}", entries.len());
                                 }
-
-                                let mut peers: Vec<Peer> = Vec::new();
-                                match value {
-                                    BValue::Lists(info_value) => {
-                                        for entries in info_value{
-                                            match entries {
-                                                BValue::Dicts(info_value) => {
-                                                    let mut peer = Peer {
-                                                        ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-                                                        port: 0,
-                                                        peer_id: vec![0],
-                                                        is_choked: true,
-                                                        peer_bitfield: vec![],
-                                                        interested: false,
-                                                    };
-                                                    for info_entries in info_value.iter(){
-                                                        let info_key = info_entries.0.clone();
-                                                        let info_value = &info_entries.1;
-                                                        let info_key =  match str::from_utf8(&info_key) {
-                                                            Ok(strs) => strs,
-                                                            Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing info key string")),
-                                                        };
-
-                                                        match info_key {
-                                                            "ip" => {
-                                                                let bytes = match info_value.get_text() {
-                                                                    Ok(bytes) => bytes,
-                                                                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Peer IP address is not text")),
-                                                                };
-                                                                let ipaddr: IpAddr = match bytes.parse() {
-                                                                    Ok(ipaddr) => ipaddr,
-                                                                    Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Peer IP address parsing failed")),
-                                                                };
-                                                                peer.ip = ipaddr;
-                                                            },
-                                                            "port" => {
-                                                                peer.port = info_value.get_number()? as u16;
-                                                                println!("Port is {}",peer.port);
-                                                            },
-                                                            "peer id" => {
-                                                                peer.peer_id = info_value.get_bytes()?;
-                                                                println!("Peer id is : {:?}",peer.peer_id);
-                                                            },
-                                                            _ => println!("Unsupported key in info_hash"), 
-                                                        }
-                                                    }
-                                                    peers.push(peer);
-                                                },
-                                                _ => println!("Unsupported key in info_hash in peer list hashing"),
-                                            }
-                                        }
-                                    },
-                                    BValue::Bytes(bytes) => {
-                                        if bytes.len() % 6 != 0 {
-                                            return Err(io::Error::new(
-                                                io::ErrorKind::InvalidData,
-                                                format!("compact IPv4 peer data has invalid length: {}", bytes.len()),
-                                            ));
-                                        }
-
-                                        for record in bytes.chunks_exact(6) {
-                                            let ip = Ipv4Addr::new(record[0], record[1], record[2], record[3]);
-                                            let port = u16::from_be_bytes([record[4], record[5]]);
-
-                                            peers.push(Peer {
-                                                ip: IpAddr::V4(ip),
-                                                port,
-                                                peer_id: Vec::new(),
-                                                peer_bitfield: Vec::new(),
-                                                is_choked: true,
-                                                interested: false,
-                                            });
-                                        }
-                                    },
-                                    _ => {
-                                        println!("Error parsing torrent info file unknow type in peer");
-                                        // return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict"));
-                                    },
-                                };
-                                peer_info.peers = peers;
+                                BValue::Bytes(bytes) => {
+                                    let prefix_len = bytes.len().min(24);
+                                    println!(
+                                        "[tracker peers] format=byte-string bytes={} compact_ipv4_records={} remainder={} prefix={:02x?}",
+                                        bytes.len(),
+                                        bytes.len() / 6,
+                                        bytes.len() % 6,
+                                        &bytes[..prefix_len]
+                                    );
+                                }
+                                BValue::Number(_) => println!("[tracker peers] unexpected format=integer"),
+                                BValue::Dicts(_) => println!("[tracker peers] unexpected format=dictionary"),
                             }
-                            _ => println!("Unhandled param, non mandatory {}",key_string),
+
+                            let mut peers: Vec<Peer> = Vec::new();
+                            match value {
+                                BValue::Lists(info_value) => {
+                                    for entries in info_value{
+                                        match entries {
+                                            BValue::Dicts(info_value) => {
+                                                let mut peer = Peer {
+                                                    ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                                                    port: 0,
+                                                    peer_id: vec![0],
+                                                    is_choked: true,
+                                                    peer_bitfield: vec![],
+                                                    interested: false,
+                                                };
+                                                for info_entries in info_value.iter(){
+                                                    let info_key = info_entries.0.clone();
+                                                    let info_value = &info_entries.1;
+                                                    let info_key =  match str::from_utf8(&info_key) {
+                                                        Ok(strs) => strs,
+                                                        Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Error while paarsing info key string")),
+                                                    };
+
+                                                    match info_key {
+                                                        "ip" => {
+                                                            let bytes = match info_value.get_text() {
+                                                                Ok(bytes) => bytes,
+                                                                Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Peer IP address is not text")),
+                                                            };
+                                                            let ipaddr: IpAddr = match bytes.parse() {
+                                                                Ok(ipaddr) => ipaddr,
+                                                                Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Peer IP address parsing failed")),
+                                                            };
+                                                            peer.ip = ipaddr;
+                                                        },
+                                                        "port" => {
+                                                            peer.port = info_value.get_number()? as u16;
+                                                            println!("Port is {}",peer.port);
+                                                        },
+                                                        "peer id" => {
+                                                            peer.peer_id = info_value.get_bytes()?;
+                                                            println!("Peer id is : {:?}",peer.peer_id);
+                                                        },
+                                                        _ => println!("Unsupported key in info_hash"), 
+                                                    }
+                                                }
+                                                peers.push(peer);
+                                            },
+                                            _ => println!("Unsupported key in info_hash in peer list hashing"),
+                                        }
+                                    }
+                                },
+                                BValue::Bytes(bytes) => {
+                                    if bytes.len() % 6 != 0 {
+                                        return Err(io::Error::new(
+                                            io::ErrorKind::InvalidData,
+                                            format!("compact IPv4 peer data has invalid length: {}", bytes.len()),
+                                        ));
+                                    }
+
+                                    for record in bytes.chunks_exact(6) {
+                                        let ip = Ipv4Addr::new(record[0], record[1], record[2], record[3]);
+                                        let port = u16::from_be_bytes([record[4], record[5]]);
+
+                                        peers.push(Peer {
+                                            ip: IpAddr::V4(ip),
+                                            port,
+                                            peer_id: Vec::new(),
+                                            peer_bitfield: Vec::new(),
+                                            is_choked: true,
+                                            interested: false,
+                                        });
+                                    }
+                                },
+                                _ => {
+                                    println!("Error parsing torrent info file unknow type in peer");
+                                    // return Err(io::Error::new(io::ErrorKind::Unsupported, "Info torrent file is not a dict"));
+                                },
+                            };
+                            peer_info.peers = peers;
                         }
+                        _ => println!("Unhandled param, non mandatory {}",key_string),
                     }
                 }
-                _ => {
-                    println!("Error parsing torrent file !!");
-                    return Err(io::Error::new(io::ErrorKind::Unsupported, "Top torrent file is not a dict"));
-                },
+            }
+            _ => {
+                println!("Error parsing torrent file !!");
+                return Err(io::Error::new(io::ErrorKind::Unsupported, "Top torrent file is not a dict"));
+            },
+        };
+        Ok(peer_info)
+    }
+
+    pub fn create_from_udp_bytes(bytes: &[u8]) -> Result<Self, io::Error> {
+        
+        let mut peer_info =  PeerInfo::default();
+
+        for peer_data in bytes.chunks_exact(6) {
+            let mut peer = Peer {
+                ip: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+                port: 0,
+                peer_id: vec![0],
+                is_choked: true,
+                peer_bitfield: vec![],
+                interested: false,
             };
-            Ok(peer_info)
+
+            let ip: Ipv4Addr = Ipv4Addr::new(peer_data[0], peer_data[1], peer_data[2], peer_data[3]);
+            let port = u16::from_be_bytes([peer_data[4], peer_data[5]]);
+            peer.ip = IpAddr::V4(ip);
+            peer.port = port;
+
+            println!("Peer: {ip}:{port}");
+
+            peer_info.peers.push(peer);
         }
+
+        return Ok(peer_info);
+    }
 
     pub fn get_peer_at_n(&self,n: usize) -> Peer{
        self.peers[n].clone()
     }
+
+
+
 }
 

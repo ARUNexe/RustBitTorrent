@@ -74,6 +74,16 @@ async fn main() {
 
 
     // PEER COMMUNICATION
+    // let peer_id = Alphanumeric.sample_string(&mut rand::rng(), 20);
+    // let peer_info: peer::PeerInfo = match comms::comms_tracker::get_peer_info_from_tracker(&torrentmeta,peer_id.clone()).await {
+    //     Ok(pi) => {pi},
+    //     Err(e) => {
+    //         println!("Error getting peerinfo from tracker: {:?}",e);
+    //         return ();
+    //     }
+    // };
+
+
     let peer_id = Alphanumeric.sample_string(&mut rand::rng(), 20);
     let peer_info: peer::PeerInfo = match comms::comms_tracker::get_peer_info_from_tracker(&torrentmeta,peer_id.clone()).await {
         Ok(pi) => {pi},
