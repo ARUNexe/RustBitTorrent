@@ -180,7 +180,7 @@ impl PeerInfo {
             peer.ip = IpAddr::V4(ip);
             peer.port = port;
 
-            println!("Peer: {ip}:{port}");
+            // println!("Peer: {ip}:{port}");
 
             peer_info.peers.push(peer);
         }

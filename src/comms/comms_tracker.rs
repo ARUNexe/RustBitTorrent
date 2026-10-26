@@ -43,7 +43,7 @@ async fn get_peer_info_from_http_tracker(torrent: &TorrentMeta,peer_id: String,t
             Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Tracker Request building failed")),   
         };
 
-    println!("Final Request is {}",request.url());
+    // println!("Final Request is {}",request.url());
 
     let response = match client.execute(request).await {
         Ok(response) => response,
@@ -79,16 +79,22 @@ async fn get_peer_info_from_udp_tracker(torrent: &TorrentMeta,peer_id: String,tr
 
     // let remote_addr = "udp://tracker.opentrackr.org:1337/announce";
 
-    let address = tracker_url.split('/');
-    for i in address {
-        println!("address : {i}");
-    }
-    // let host = address.nth()
+    let mut address = tracker_url.split('/');
+    // for i in address {
+    //     println!("UDP address : {i}");
+    // }
+    let tracker: &str = match address.nth(2) {
+        Some(host) => {host},
+        None => {
+            println!("[ERROR] Error while parsing udp tracker url");
+            return Err(io::Error::new(io::ErrorKind::AddrNotAvailable, "Error while parsing udp tracker url"));
+        },
+    };
 
 
 
-    let tracker = "tracker.opentrackr.org:1337";
-    println!("Trying connection to udp tracker {}",tracker);
+    // let tracker = "tracker.opentrackr.org:1337";
+    // println!("Trying connection to udp tracker {}",tracker);
 
     let addr: SocketAddr = lookup_host(tracker)
         .await?
@@ -97,10 +103,10 @@ async fn get_peer_info_from_udp_tracker(torrent: &TorrentMeta,peer_id: String,tr
 
     let sock = UdpSocket::bind("0.0.0.0:6882").await.expect("msg");
 
-    match addr {
-        SocketAddr::V4(_) => {println!("Reveived ipv4 tracker");},
-        SocketAddr::V6(_) => {println!("Reveived ipv6 tracker");}, 
-    }
+    // match addr {
+    //     SocketAddr::V4(_) => {println!("Reveived ipv4 tracker");},
+    //     SocketAddr::V6(_) => {println!("Reveived ipv6 tracker");}, 
+    // }
 
     sock.connect(addr).await?;
 
@@ -108,7 +114,7 @@ async fn get_peer_info_from_udp_tracker(torrent: &TorrentMeta,peer_id: String,tr
 
     let protocol_id: u64 = 0x41727101980;
     let bytes = protocol_id.to_be_bytes();
-    let transaction_id: u32 = 67;
+    let transaction_id: i32 = 67;
     
     let mut message = Vec::with_capacity(16);
     message.extend_from_slice(&bytes);
@@ -117,21 +123,27 @@ async fn get_peer_info_from_udp_tracker(torrent: &TorrentMeta,peer_id: String,tr
 
 
     let _len = sock.send(&message).await?;
-
     let mut buf = [0; 2048];
-    let len = sock.recv(&mut buf).await?;
-    println!("{:?} bytes received from {:?}", len, tracker);
+    let _len = sock.recv(&mut buf).await?;
 
     let action = i32::from_be_bytes(buf[0..4].try_into().unwrap());
     let trans_id = i32::from_be_bytes(buf[4..8].try_into().unwrap());
     let connection_id = i64::from_be_bytes(buf[8..16].try_into().unwrap());
-    println!("{:?} bytes received", len);
 
-    println!("[CONNECT] Received action : {}, received transaction_id : {}, received connection_id: {}",action,trans_id,connection_id);
+    if action != 0 {
+        println!("[WARNING] Connecting sequence for udp tracker error : {}",action);
+        return  Err(Error::new(io::ErrorKind::AddrNotAvailable, "Connecting sequence for udp tracker error"));
+    }
 
+    if trans_id!=transaction_id {
+        println!("[WARNING] Connecting sequence for udp tracker wrong transaction_id : SENT {}, RECEIVED {}",transaction_id,trans_id);
+        return  Err(Error::new(io::ErrorKind::AddrNotAvailable, "Connecting sequence for udp tracker wrong transaction_id"));
+    }
 
+    // println!("{:?} bytes received", len);
+    // println!("[CONNECT] Received action : {}, received transaction_id : {}, received connection_id: {}",action,trans_id,connection_id);
+    
     // ANOUNCE SSEQUENCE
-
 
     let action: i32 = 1;
     let info_hash_sha1 = utils::get_sha1(&torrent.info_hash);
@@ -171,18 +183,27 @@ async fn get_peer_info_from_udp_tracker(torrent: &TorrentMeta,peer_id: String,tr
 
     let action = i32::from_be_bytes(buf[0..4].try_into().unwrap());
     let trans_id = i32::from_be_bytes(buf[4..8].try_into().unwrap());
-    let intervel = i32::from_be_bytes(buf[8..12].try_into().unwrap());
-    let leech = i32::from_be_bytes(buf[12..16].try_into().unwrap());
-    let seeders = i32::from_be_bytes(buf[16..20].try_into().unwrap());
+    let _intervel = i32::from_be_bytes(buf[8..12].try_into().unwrap());
+    let _leech = i32::from_be_bytes(buf[12..16].try_into().unwrap());
+    let _seeders = i32::from_be_bytes(buf[16..20].try_into().unwrap());
+
+    if action != 1 {
+        println!("[WARNING] Anouncing sequence for udp tracker error : {}",action);
+        return  Err(Error::new(io::ErrorKind::AddrNotAvailable, "ncing sequence for udp tracker error"));
+    }
+
+    if transaction_id != trans_id {
+        println!("[WARNING] Anouncing sequence for wrong transaction_id : Sent {}, Received {}",transaction_id,trans_id);
+        return  Err(Error::new(io::ErrorKind::AddrNotAvailable, "Anouncing sequence for wrong transaction_id"));
+    }
+
 
     // println!("[ANOUNCE] Received action : {}, received transaction_id : {}, received intervel: {}, leechers : {}, seeder: {}",action,trans_id,intervel,leech,seeders);
-
-
-    for i in 0..seeders {
-        let ip_offset = 20 + (4*i);
-        let port_offset = 24 + (2*i);
-        println!("IP: {:?} , PORT: {:?}",&buf[ip_offset as usize..(ip_offset+4) as usize],&buf[port_offset as usize..(port_offset+2) as usize]);
-    }
+    // for i in 0..seeders {
+    //     let ip_offset = 20 + (4*i);
+    //     let port_offset = 24 + (2*i);
+        // println!("IP: {:?} , PORT: {:?}",&buf[ip_offset as usize..(ip_offset+4) as usize],&buf[port_offset as usize..(port_offset+2) as usize]);
+    // }
 
     let peer_info = PeerInfo::create_from_udp_bytes(&buf[20..len]);
 

@@ -41,8 +41,8 @@ pub async fn send_handshake_to_peer(info_hash: &Vec<u8>,peer_id: &String,stream:
     let res = stream.read_exact(&mut buffer).await;
     match res {
         Ok(_) =>  {},
-        Err(err) => {
-            eprintln!("Failed to read peer handshake: {err}");
+        Err(_err) => {
+            // eprintln!("Failed to read peer handshake: {err}");
             return false;
         }
     }
@@ -158,17 +158,18 @@ impl Drop for ActivePeerGuard {
 }
 
 pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,mut stream: TcpStream  ,shared_state: Arc<Mutex<download_state::DownloadState>>,piece_length: i64, piece_hash: Vec<u8>,storage_sender: mpsc::Sender<CompletedPiece>,total_data_size: i64,benchmark: Arc<Benchmark>) {
-    println!("Running handle peer for peer_id {:?}",&peer.peer_id);
+    // println!("Running handle peer for peer_id {:?}",&peer.peer_id);
     let success = send_handshake_to_peer(&info_hash, &my_peerid_c, &mut stream).await;
 
     if success {
-        println!("My Peer id : {:?} Connected in handshake",&peer.peer_id);
+        // println!("My Peer id : {:?} Connected in handshake",&peer.peer_id);
     }
     else {
-        println!("My Peer id : {:?} Failed to connect in handshake",&peer.peer_id);
+        // println!("My Peer id : {:?} Failed to connect in handshake",&peer.peer_id);
         return;
     }
     benchmark.peer_connected();
+
     let _active_peer_guard = ActivePeerGuard(benchmark.clone());
 
     let (reader, mut writer) = stream.into_split();
@@ -180,7 +181,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
         let ss = shared_state.lock().unwrap();
         nb_pieces = ss.piece_count;
     }
-    println!("Total number of pieces  = {}", nb_pieces);
+    // println!("Total number of pieces  = {}", nb_pieces);
 
 
     let (tx, mut rx) = mpsc::channel::<Vec<u8>>(32);
@@ -204,11 +205,11 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                     Some(msg) => {
             
                         if msg[0] == 5 { // bitfield
-                            println!("Peer send birfield");
+                            // println!("Peer send birfield");
                             peer.peer_bitfield = msg[1..].to_vec();
                         }
                         else if msg[0] == 1 { // unchoke
-                            println!("Peer send Unchoke");
+                            // println!("Peer send Unchoke");
                             peer.is_choked = false;
                         }
                         else if msg[0] == 7 { // piece
@@ -269,7 +270,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                             }
                         } 
                         else {
-                            println!("Unhandled Message: Peer send msg {:?}",msg);
+                            // println!("Unhandled Message: Peer send msg {:?}",msg);
                         }
                     },
                     None => {
@@ -309,7 +310,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                     let is_available = peer_has_piece(&peer.peer_bitfield, piece_index);
                     if is_available {
                         ss.pieces[current_piece as usize].status = download_state::PieceStatus::Downloading;
-                        println!("Downloading Piece {}",current_piece);
+                        // println!("Downloading Piece {}",current_piece);
                         let piece_size = if current_piece == (nb_pieces as i64) - 1 {
                             (total_data_size - current_piece * piece_length) as usize
                         } else {
@@ -330,7 +331,7 @@ pub async fn handle_peer(mut peer: Peer,info_hash: Vec<u8>,my_peerid_c: String,m
                     let res = send_interested(&mut writer).await;
                     match res {
                         Ok(_) => {
-                            println!("interested message sent successfully");
+                            // println!("interested message sent successfully");
                             peer.interested = true;
                         },
                         Err(_) => {

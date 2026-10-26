@@ -70,8 +70,15 @@ async fn main() {
     // SHARED PIECES STATE CTEATION
     let nb_pieces: i64 = ((torrentmeta.info.length as f64) / (torrentmeta.info.piece_length as f64)).ceil() as i64;
     println!("nb_pieces : {}",nb_pieces);
-    let shared_state = Arc::new(Mutex::new(download_state::DownloadState::init(nb_pieces)));
+    let shared_state = Arc::new(Mutex::new(download_state::DownloadState::init(nb_pieces,torrentmeta.info_hash.clone(),&torrentmeta.info.name)));
 
+    {
+        let ss = shared_state.lock().unwrap();
+        if ss.check_if_all_downloaded() {
+            println!("File already downloaded!!");
+            return;
+        }
+    }
 
     // PEER COMMUNICATION
     // let peer_id = Alphanumeric.sample_string(&mut rand::rng(), 20);

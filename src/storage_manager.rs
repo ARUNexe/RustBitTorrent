@@ -1,6 +1,7 @@
 use std::io;
 use std::sync::{Arc,Mutex};
 use tokio::fs::File;
+use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::io::AsyncSeekExt;
 use tokio::sync::mpsc::Receiver;
@@ -15,6 +16,7 @@ pub struct CompletedPiece {
 }
 
 pub struct StorageManager {
+    pub filename: String,
     pub file: File,
     pub piece_length: u64,
     pub shared_state : Arc<Mutex<download_state::DownloadState>>,
@@ -23,23 +25,23 @@ pub struct StorageManager {
 
 impl StorageManager {
     pub async fn init(filename: String,piece_length: u64,shared_state : Arc<Mutex<download_state::DownloadState>>) -> Result<Self,std::io::Error> {
-        let file = match File::create(filename).await {
+
+        
+        let file: File = match OpenOptions::new().write(true).create(true).open(&filename).await {
             Ok(f) => f,
             Err(_) => {
                 println!("Error opening output file");
                 return Err(io::Error::new(io::ErrorKind::InvalidFilename, "Error opening file"));
             }
         };
-
-
         return Ok(StorageManager{
+            filename: filename.clone(),
             file: file,
             piece_length: piece_length,
             shared_state: shared_state,
-        });
+        });    
     }
 }
-
 
 pub async fn storagemanager_listener_loop(mut storage_manager: StorageManager, mut receiver: Receiver<CompletedPiece>) {
 
@@ -74,8 +76,8 @@ pub async fn write_piece_to_file(storage_manager: &mut StorageManager, completed
     let mut ss = storage_manager.shared_state.lock().unwrap();
     // println!("Writing for piece index : {}",completed_piece.index as usize);
     ss.pieces[completed_piece.index as usize].status = download_state::PieceStatus::Completed;
-    println!("Piece {} downloaded successfully",completed_piece.index);
-
+    ss.store_download_state_in_json(&storage_manager.filename);
+    // Write flush resumeData to json
     true
 }
 
