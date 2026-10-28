@@ -70,8 +70,7 @@ async fn main() {
     // SHARED PIECES STATE CTEATION
     let nb_pieces: i64 = ((torrentmeta.info.length as f64) / (torrentmeta.info.piece_length as f64)).ceil() as i64;
     println!("nb_pieces : {}",nb_pieces);
-    let shared_state = Arc::new(Mutex::new(download_state::DownloadState::init(nb_pieces,torrentmeta.info_hash.clone(),&torrentmeta.info.name)));
-
+    let shared_state = Arc::new(Mutex::new(download_state::DownloadState::init(nb_pieces,torrentmeta.info.pieces.clone(),&torrentmeta.info.name,torrentmeta.info.piece_length).await));
     {
         let ss = shared_state.lock().unwrap();
         if ss.check_if_all_downloaded() {
@@ -103,15 +102,25 @@ async fn main() {
     let benchmark = Arc::new(benchmark::Benchmark::new());
     let reporter = if benchmark_enabled {
         let metrics = benchmark.clone();
+        let download_state = shared_state.clone();
         Some(tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(1));
             let mut previous_received_bytes = 0u64;
             loop {
                 interval.tick().await;
                 let (active, peak, received_bytes, verified_bytes) = metrics.snapshot();
+                let downloaded_pieces = download_state
+                    .lock()
+                    .map(|state| state.pieces.iter().filter(|piece| piece.status == download_state::PieceStatus::Completed).count())
+                    .unwrap_or(0);
+                let downloaded_percentage = if nb_pieces > 0 {
+                    downloaded_pieces as f64 / nb_pieces as f64 * 100.0
+                } else {
+                    0.0
+                };
                 let speed = (received_bytes - previous_received_bytes) as f64 / (1024.0 * 1024.0);
                 previous_received_bytes = received_bytes;
-                print!("\r[benchmark] peers active={active} peak={peak} received={received_bytes} B verified={verified_bytes} B speed={speed:.2} MiB/s");
+                print!("\r[benchmark] peers active={active} peak={peak} downloaded={downloaded_pieces}/{nb_pieces} ({downloaded_percentage:.1}%) received={received_bytes} B verified={verified_bytes} B speed={speed:.2} MiB/s");
                 std::io::Write::flush(&mut std::io::stdout()).unwrap();
             }
         }))
@@ -142,7 +151,7 @@ async fn main() {
         let stream = match TcpStream::connect(addr).await {
             Ok(str) => {str},
             Err(_) => {
-                println!("Error connection to peer {:?}",&peer.peer_id);
+                // println!("Error connection to peer {:?}",&peer.peer_id);
                 continue;
             }
         };
@@ -170,8 +179,17 @@ async fn main() {
         reporter.abort();
         let elapsed = benchmark.started.elapsed().as_secs_f64();
         let (active, peak, received_bytes, verified_bytes) = benchmark.snapshot();
+        let downloaded_pieces = shared_state
+            .lock()
+            .map(|state| state.pieces.iter().filter(|piece| piece.status == download_state::PieceStatus::Completed).count())
+            .unwrap_or(0);
+        let downloaded_percentage = if nb_pieces > 0 {
+            downloaded_pieces as f64 / nb_pieces as f64 * 100.0
+        } else {
+            0.0
+        };
         let average_speed = if elapsed > 0.0 { received_bytes as f64 / elapsed / (1024.0 * 1024.0) } else { 0.0 };
-        println!("\r[benchmark] complete elapsed={elapsed:.2}s peers active={active} peak={peak} received={received_bytes} B verified={verified_bytes} B average={average_speed:.2} MiB/s");
+        println!("\r[benchmark] complete elapsed={elapsed:.2}s peers active={active} peak={peak} downloaded={downloaded_pieces}/{nb_pieces} ({downloaded_percentage:.1}%) received={received_bytes} B verified={verified_bytes} B average={average_speed:.2} MiB/s");
     }
     
 }

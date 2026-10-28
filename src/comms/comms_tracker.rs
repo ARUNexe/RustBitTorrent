@@ -60,7 +60,7 @@ async fn get_peer_info_from_http_tracker(torrent: &TorrentMeta,peer_id: String,t
         Err(_) => return Err(io::Error::new(io::ErrorKind::Unsupported, "Tracker response bencode parsing failed")),
     };
 
-    result_bvalue.printer();
+    // result_bvalue.printer();
 
     let peerinfo = match PeerInfo::create_from_bvalue(&result_bvalue) {
         Ok(peerinfo) => peerinfo,

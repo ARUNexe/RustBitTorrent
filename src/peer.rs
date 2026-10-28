@@ -36,34 +36,34 @@ impl PeerInfo {
                     match key_string {
                         "complete" => {
                             peer_info.complete = value.get_number()?;
-                            println!("Peer info complete is : {}",peer_info.complete);
+                            // println!("Peer info complete is : {}",peer_info.complete);
                         },
                         "incomplete" => {
                             peer_info.incomplete = value.get_number()?;
-                            println!("Peer info incomplete is : {}",peer_info.incomplete);
+                            // println!("Peer info incomplete is : {}",peer_info.incomplete);
                         },
                         "interval" => {
                             peer_info.interval = value.get_number()?;
-                            println!("Peer info interval is : {}",peer_info.interval);
+                            // println!("Peer info interval is : {}",peer_info.interval);
                         },
                         "min interval" => {
                             // peer_info.interval = value.get_number()?;
-                            println!("Peer info min interval is : {}",peer_info.interval);
+                            // println!("Peer info min interval is : {}",peer_info.interval);
                         },
                         "peers" => {
                             match value {
-                                BValue::Lists(entries) => {
-                                    println!("[tracker peers] format=list entries={}", entries.len());
+                                BValue::Lists(_entries) => {
+                                    // println!("[tracker peers] format=list entries={}", entries.len());
                                 }
                                 BValue::Bytes(bytes) => {
-                                    let prefix_len = bytes.len().min(24);
-                                    println!(
-                                        "[tracker peers] format=byte-string bytes={} compact_ipv4_records={} remainder={} prefix={:02x?}",
-                                        bytes.len(),
-                                        bytes.len() / 6,
-                                        bytes.len() % 6,
-                                        &bytes[..prefix_len]
-                                    );
+                                    let _prefix_len = bytes.len().min(24);
+                                    // println!(
+                                    //     "[tracker peers] format=byte-string bytes={} compact_ipv4_records={} remainder={} prefix={:02x?}",
+                                    //     bytes.len(),
+                                    //     bytes.len() / 6,
+                                    //     bytes.len() % 6,
+                                    //     &bytes[..prefix_len]
+                                    // );
                                 }
                                 BValue::Number(_) => println!("[tracker peers] unexpected format=integer"),
                                 BValue::Dicts(_) => println!("[tracker peers] unexpected format=dictionary"),
@@ -105,11 +105,11 @@ impl PeerInfo {
                                                         },
                                                         "port" => {
                                                             peer.port = info_value.get_number()? as u16;
-                                                            println!("Port is {}",peer.port);
+                                                            // println!("Port is {}",peer.port);
                                                         },
                                                         "peer id" => {
                                                             peer.peer_id = info_value.get_bytes()?;
-                                                            println!("Peer id is : {:?}",peer.peer_id);
+                                                            // println!("Peer id is : {:?}",peer.peer_id);
                                                         },
                                                         _ => println!("Unsupported key in info_hash"), 
                                                     }
