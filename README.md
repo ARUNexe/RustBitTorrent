@@ -5,7 +5,7 @@ A minimal BitTorrent client written in Rust. It reads a `.torrent` file, request
 ## Features
 
 - Bencode decoding for torrent metadata and tracker responses
-- Tracker announce and peer discovery
+- HTTPS and UDP Tracker announce and peer discovery
 - Peer communication using the BitTorrent peer-wire protocol:
   - Choke / Unchoke
   - Interested / Not Interested
@@ -15,6 +15,7 @@ A minimal BitTorrent client written in Rust. It reads a `.torrent` file, request
 - Piece selection, block requests, and SHA-1 piece verification
 - Concurrent peer handling, piece scheduling and shared download state
 - Asynchronous file storage
+- Download Resume from piece milestone with resume data verification
 
 ## How it works
 
